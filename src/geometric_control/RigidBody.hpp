@@ -1,5 +1,5 @@
-#ifndef GEOMETRICCONTROL_RIGIDBODY_HPP
-#define GEOMETRICCONTROL_RIGIDBODY_HPP
+#ifndef GEOMETRIC_CONTROL_RIGIDBODY_HPP
+#define GEOMETRIC_CONTROL_RIGIDBODY_HPP
 
 #include <Magnum/BulletIntegration/DebugDraw.h>
 #include <Magnum/BulletIntegration/Integration.h>
@@ -55,4 +55,4 @@ namespace geometric_control {
     };
 } // namespace geometric_control
 
-#endif // GEOMETRICCONTROL_RIGIDBODY_HPP
+#endif // GEOMETRIC_CONTROL_RIGIDBODY_HPP

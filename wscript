@@ -17,7 +17,7 @@ def options(opt):
     opt.load("compiler_cxx")
 
     # Load tools options
-    opt.load("flags bullet magnum", tooldir="waf_tools")
+    opt.load("flags bullet magnum x11", tooldir="waf_tools")
 
     # Add options
     opt.add_option("--shared",
@@ -46,10 +46,10 @@ def configure(cfg):
     cfg.options.magnum_integrations = "Bullet"
 
     # Bullet components
-    cfg.options.bullet_components = "BulletDynamics,BulletCollision,LinearMath"
+    cfg.options.bullet_components = "BulletDynamics,BulletCollision,LinearMath,BulletInverseDynamics,Bullet3Common,BulletInverseDynamicsUtils"
 
     # Load tools configuration
-    cfg.load("flags bullet magnum", tooldir="waf_tools")
+    cfg.load("flags bullet magnum x11", tooldir="waf_tools")
 
     # Remove duplicates
     cfg.get_env()["libs"] = list(set(cfg.get_env()["libs"]))
@@ -91,7 +91,7 @@ def build(bld):
             target=bld.get_env()["libname"],
             includes=includes_path,
             uselib=bld.get_env()["libs"],
-            cxxxflags=bld.get_env()["CXXFLAGS"],
+            cxxflags=bld.get_env()["CXXFLAGS"],
         )
     else:
         bld.stlib(
@@ -100,7 +100,7 @@ def build(bld):
             target=bld.get_env()["libname"],
             includes=includes_path,
             uselib=bld.get_env()["libs"],
-            cxxxflags=bld.get_env()["CXXFLAGS"],
+            cxxflags=bld.get_env()["CXXFLAGS"],
         )
 
     # Build executables
@@ -122,3 +122,8 @@ def build(bld):
             "${PREFIX}/lib",
             blddir + "/lib" + bld.get_env()["libname"] + "." + bld.env.SUFFIX,
         )
+
+# for root, dirs, files in os.walk(directory):
+#     for filename in files:
+#         if filename.endswith(('.jpg', '.jpeg', '.gif', '.png')):
+#             pass

@@ -1,5 +1,5 @@
-#ifndef GEOMETRICCONTROL_COLOREDDRAWABLE_HPP
-#define GEOMETRICCONTROL_COLOREDDRAWABLE_HPP
+#ifndef GEOMETRIC_CONTROL_COLORED_DRAWABLE_HPP
+#define GEOMETRIC_CONTROL_COLORED_DRAWABLE_HPP
 
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
@@ -41,4 +41,4 @@ namespace geometric_control {
 
 } // namespace geometric_control
 
-#endif // GEOMETRICCONTROL_COLOREDDRAWABLE_HPP
+#endif // GEOMETRIC_CONTROL_COLORED_DRAWABLE_HPP

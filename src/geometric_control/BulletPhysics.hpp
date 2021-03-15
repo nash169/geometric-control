@@ -1,5 +1,5 @@
-#ifndef GEOMETRICCONTROL_BULLETPHYSICS_HPP
-#define GEOMETRICCONTROL_BULLETPHYSICS_HPP
+#ifndef GEOMETRIC_CONTROL_BULLET_PHYSICS_HPP
+#define GEOMETRIC_CONTROL_BULLET_PHYSICS_HPP
 
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
@@ -295,4 +295,4 @@ namespace geometric_control {
     }
 } // namespace geometric_control
 
-#endif // GEOMETRICCONTROL_BULLETPHYSICS_HPP
+#endif // GEOMETRIC_CONTROL_BULLET_PHYSICS_HPP

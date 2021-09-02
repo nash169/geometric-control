@@ -1,17 +1,21 @@
 #ifndef GEOMETRIC_CONTROL_MANIFOLDS_GRASSMANN_HPP
 #define GEOMETRIC_CONTROL_MANIFOLDS_GRASSMANN_HPP
 
-class Grassmann {
-public:
-    Grassmann()
-    {
-    }
+namespace geometric_control {
+    namespace manifolds {
+        class Grassmann {
+        public:
+            Grassmann()
+            {
+            }
 
-    ~Grassmann()
-    {
-    }
+            ~Grassmann()
+            {
+            }
 
-protected:
-};
+        protected:
+        };
+    } // namespace manifolds
+} // namespace geometric_control
 
 #endif // GEOMETRIC_CONTROL_MANIFOLDS_GRASSMANN_HPP

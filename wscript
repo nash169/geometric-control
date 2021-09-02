@@ -17,7 +17,7 @@ def options(opt):
     opt.load("compiler_cxx")
 
     # Load tools options
-    opt.load("flags bullet magnum x11", tooldir="waf_tools")
+    opt.load("flags eigen", tooldir="waf_tools")
 
     # Add options
     opt.add_option("--shared",
@@ -34,22 +34,13 @@ def configure(cfg):
     cfg.env.SUFFIX = "dylib" if cfg.env["DEST_OS"] == "darwin" else "so"
 
     # Load compiler configuration and generate clangd flags
-    cfg.load("compiler_cxx")  # cfg.load("clang_compilation_database")
+    cfg.load("compiler_cxx clang_compilation_database")
 
     # Define require libraries
-    cfg.get_env()["requires"] += ["BULLET"]
-
-    # (Optional Graphics) Magnum components and integration loading
-    cfg.options.magnum_components = (
-        "Sdl2Application,Primitives,Shaders,MeshTools,SceneGraph,Trade,GL"
-    )
-    cfg.options.magnum_integrations = "Bullet"
-
-    # Bullet components
-    cfg.options.bullet_components = "BulletDynamics,BulletCollision,LinearMath,BulletInverseDynamics,Bullet3Common,BulletInverseDynamicsUtils"
+    cfg.get_env()["requires"] += ["EIGEN"]
 
     # Load tools configuration
-    cfg.load("flags bullet magnum x11", tooldir="waf_tools")
+    cfg.load("flags eigen", tooldir="waf_tools")
 
     # Remove duplicates
     cfg.get_env()["libs"] = list(set(cfg.get_env()["libs"]))

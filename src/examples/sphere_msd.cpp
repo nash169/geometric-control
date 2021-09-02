@@ -1,10 +1,10 @@
-#include <geometric_control/BulletPhysics.hpp>
 #include <iostream>
+
+#include <geometric_control/GeometricControl.hpp>
 
 using namespace geometric_control;
 
 int main(int argc, char** argv)
 {
-    BulletPhysics app({argc, argv});
-    return app.exec();
+    return 0;
 }

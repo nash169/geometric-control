@@ -1,17 +1,21 @@
 #ifndef GEOMETRIC_CONTROL_MANIFOLDS_SPECIAL_ORTHOGONAL_HPP
 #define GEOMETRIC_CONTROL_MANIFOLDS_SPECIAL_ORTHOGONAL_HPP
 
-class SpecialOrthogonal {
-public:
-    SpecialOrthogonal()
-    {
-    }
+namespace geometric_control {
+    namespace manifolds {
+        class SpecialOrthogonal {
+        public:
+            SpecialOrthogonal()
+            {
+            }
 
-    ~SpecialOrthogonal()
-    {
-    }
+            ~SpecialOrthogonal()
+            {
+            }
 
-protected:
-};
+        protected:
+        };
+    } // namespace manifolds
+} // namespace geometric_control
 
 #endif // GEOMETRIC_CONTROL_MANIFOLDS_SPECIAL_ORTHOGONAL_HPP

@@ -1,17 +1,21 @@
 #ifndef GEOMETRIC_CONTROL_MANIFOLDS_SPHERE_HPP
 #define GEOMETRIC_CONTROL_MANIFOLDS_SPHERE_HPP
 
-class Sphere {
-public:
-    Sphere()
-    {
-    }
+namespace geometric_control {
+    namespace manifolds {
+        class Sphere {
+        public:
+            Sphere()
+            {
+            }
 
-    ~Sphere()
-    {
-    }
+            ~Sphere()
+            {
+            }
 
-protected:
-};
+        protected:
+        };
+    } // namespace manifolds
+} // namespace geometric_control
 
 #endif // GEOMETRIC_CONTROL_MANIFOLDS_SPHERE_HPP

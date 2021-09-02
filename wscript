@@ -90,8 +90,7 @@ def build(bld):
             source=sources,
             target=bld.get_env()["libname"],
             includes=includes_path,
-            uselib=bld.get_env()["libs"],
-            cxxflags=bld.get_env()["CXXFLAGS"],
+            uselib=bld.get_env()["libs"]
         )
     else:
         bld.stlib(
@@ -99,8 +98,7 @@ def build(bld):
             source=sources,
             target=bld.get_env()["libname"],
             includes=includes_path,
-            uselib=bld.get_env()["libs"],
-            cxxflags=bld.get_env()["CXXFLAGS"],
+            uselib=bld.get_env()["libs"]
         )
 
     # Build executables

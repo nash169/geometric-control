@@ -5,8 +5,10 @@
 
 #include <geometric_control/GeometricControl.hpp>
 #include <geometric_control/tools/helper.hpp>
+#include <utils_cpp/FileManager.hpp>
 
 using namespace geometric_control;
+using namespace utils_cpp;
 
 int main(int argc, char** argv)
 {

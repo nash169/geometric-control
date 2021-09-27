@@ -11,6 +11,12 @@ APPNAME = "geometric-control"
 srcdir = "."
 blddir = "build"
 
+# Tools' name and directory
+tools = {
+    "kernel_lib": "",
+    "utils_cpp": ""
+}
+
 
 def options(opt):
     # Load modules necessary in the configuration function
@@ -18,6 +24,11 @@ def options(opt):
 
     # Load tools options
     opt.load("flags eigen", tooldir="waf_tools")
+
+    # Load personal tools options
+    for key in tools:
+        opt.load(key, tooldir=os.path.join(
+            tools[key], "share/waf"))
 
     # Add options
     opt.add_option("--shared",
@@ -37,10 +48,15 @@ def configure(cfg):
     cfg.load("compiler_cxx clang_compilation_database")
 
     # Define require libraries
-    cfg.get_env()["requires"] += ["EIGEN"]
+    cfg.get_env()["requires"] += ["EIGEN", "KERNEL", "UTILSCPP"]
 
     # Load tools configuration
     cfg.load("flags eigen", tooldir="waf_tools")
+
+    # Load personal tools configurations
+    for key in tools:
+        cfg.load(key, tooldir=os.path.join(
+            tools[key], "share/waf"))
 
     # Remove duplicates
     cfg.get_env()["libs"] = list(set(cfg.get_env()["libs"]))

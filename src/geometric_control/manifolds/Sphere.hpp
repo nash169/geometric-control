@@ -1,18 +1,17 @@
 #ifndef GEOMETRIC_CONTROL_MANIFOLDS_SPHERE_HPP
 #define GEOMETRIC_CONTROL_MANIFOLDS_SPHERE_HPP
 
-#include <unsupported/Eigen/CXX11/Tensor>
+#include <complex>
 
 #include "geometric_control/manifolds/AbstractManifold.hpp"
-#include "geometric_control/tools/helper.hpp"
 
 namespace geometric_control {
     namespace manifolds {
         class Sphere : public AbstractManifold {
         public:
-            Sphere(const size_t& dimension) : AbstractManifold(dimension), _radius(1.0)
+            Sphere(const size_t& dim) : AbstractManifold(dim), _radius(1.0)
             {
-                _center.setZero(dimension + 1);
+                _center.setZero(dim + 1);
             }
 
             ~Sphere() {}
@@ -104,15 +103,7 @@ namespace geometric_control {
 
             Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) override
             {
-                Eigen::MatrixXd g = metric(x);
-                g.diagonal() = g.diagonal().array().inverse();
-
-                Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)};
-
-                Eigen::Tensor<double, 3> grad = metricGrad(x),
-                                         T = 0.5 * tools::TensorCast(g).contract(grad.shuffle(Eigen::array<int, 3>({1, 0, 2})) + grad.shuffle(Eigen::array<int, 3>({1, 0, 2})).shuffle(Eigen::array<int, 3>({0, 2, 1})) - grad, c1);
-
-                return T;
+                return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
             }
 
             Eigen::Tensor<double, 3> metricGrad(const Eigen::VectorXd& x)
@@ -131,12 +122,43 @@ namespace geometric_control {
                             grad(i, i, j) *= (k == j) ? 2 * sin(x(k)) * cos(x(k)) : sin(x(k)) * sin(x(k));
                     }
 
-                return grad.shuffle(Eigen::array<int, 3>({2, 0, 1}));
+                return grad;
+            }
+
+            double distance(const Eigen::VectorXd& x, const Eigen::VectorXd& y)
+            {
+                std::complex<double> d = (embedding(x) - embedding(y)).norm();
+
+                return 2 * asin(0.5 * d).real();
+            }
+
+            Eigen::VectorXd distanceGrad(const Eigen::VectorXd& x, const Eigen::VectorXd& y)
+            {
+                double p = embedding(x).transpose() * embedding(y);
+
+                return -1 / sqrt(1 - p * p) * embedding(x).transpose() * jacobian(y);
+
+                // double d = (embedding(x) - embedding(y)).norm();
+
+                // return -cos(d) / pow(sin(d), 2) / d * (embedding(x) - embedding(y)).transpose() * jacobian(x);
+            }
+
+            Eigen::VectorXd projector(const Eigen::VectorXd& x, const Eigen::VectorXd& u)
+            {
+                return u - (x.transpose() * u) * x;
             }
 
         protected:
             double _radius;
             Eigen::VectorXd _center;
+
+            // // with respect to y
+            // Eigen::VectorXd distanceGrad(const Eigen::VectorXd& x, const Eigen::VectorXd& y)
+            // {
+            //     double p = embedding(x).transpose() * embedding(y);
+
+            //     return projector(embedding(y), pow(acos(p), 2) * sin(p) * embedding(x));
+            // }
         };
     } // namespace manifolds
 } // namespace geometric_control

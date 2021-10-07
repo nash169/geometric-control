@@ -13,8 +13,9 @@ blddir = "build"
 
 # Tools' name and directory
 tools = {
-    "kernel_lib": "",
-    "utils_cpp": ""
+    "kernel_lib": "/home/bernardo/devs/kernel-lib/install",
+    "utils_cpp": "/home/bernardo/devs/utils-cpp/install",
+    "integrator_lib": "/home/bernardo/devs/integrator-lib/install",
 }
 
 
@@ -48,7 +49,7 @@ def configure(cfg):
     cfg.load("compiler_cxx clang_compilation_database")
 
     # Define require libraries
-    cfg.get_env()["requires"] += ["EIGEN", "KERNEL", "UTILSCPP"]
+    cfg.get_env()["requires"] += ["EIGEN", "KERNEL"]
 
     # Load tools configuration
     cfg.load("flags eigen", tooldir="waf_tools")
@@ -127,6 +128,10 @@ def build(bld):
             "${PREFIX}/lib",
             blddir + "/lib" + bld.get_env()["libname"] + "." + bld.env.SUFFIX,
         )
+
+    # Install tools
+    bld.install_files("${PREFIX}/share/waf", "scripts/integrator_lib.py")
+    bld.install_files("${PREFIX}/share/waf", "waf_tools/utils.py")
 
 # for root, dirs, files in os.walk(directory):
 #     for filename in files:

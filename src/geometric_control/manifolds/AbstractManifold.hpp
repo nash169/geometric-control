@@ -1,14 +1,18 @@
 #ifndef GEOMETRIC_CONTROL_MANIFOLDS_ABSTRACT_MANIFOLD_HPP
 #define GEOMETRIC_CONTROL_MANIFOLDS_ABSTRACT_MANIFOLD_HPP
 
-#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
+
+#include "geometric_control/tools/helper.hpp"
+#include "geometric_control/tools/math.hpp"
 
 namespace geometric_control {
     namespace manifolds {
         class AbstractManifold {
         public:
-            AbstractManifold(const u_int& dimension) : _d(dimension) {}
+            AbstractManifold(const u_int& dim) : _d(dim) {}
 
             ~AbstractManifold() {}
 

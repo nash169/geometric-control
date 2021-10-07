@@ -3,6 +3,7 @@
 
 /* Manifolds */
 #include "geometric_control/manifolds/Grassmann.hpp"
+#include "geometric_control/manifolds/KernelDeformed.hpp"
 #include "geometric_control/manifolds/SpecialOrthogonal.hpp"
 #include "geometric_control/manifolds/Sphere.hpp"
 

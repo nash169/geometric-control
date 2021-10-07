@@ -1,85 +1,91 @@
-#include <algorithm>
 #include <iostream>
-// #include <span>
-#include <vector>
 
-#include <geometric_control/GeometricControl.hpp>
-#include <geometric_control/tools/helper.hpp>
+// #include <geometric_control/GeometricControl.hpp>
+#include <geometric_control/dynamics/MassSpringDamper.hpp>
+#include <geometric_control/manifolds/Sphere.hpp>
+
+#include <integrator_lib/Integrate.hpp>
 #include <utils_cpp/FileManager.hpp>
 
 using namespace geometric_control;
 using namespace utils_cpp;
+using namespace integrator_lib;
+
+struct Params {
+    struct integrator : public defaults::integrator {
+    };
+};
 
 int main(int argc, char** argv)
 {
-    // Eigen::MatrixXd A = Eigen::MatrixXd::Random(3, 3),
-    //                 B = Eigen::MatrixXd::Random(3, 3);
+    // Data
+    double box[] = {0, M_PI, 0, 2 * M_PI};
+    size_t resolution = 100, num_samples = resolution * resolution, dim = sizeof(box) / sizeof(*box) / 2, num_deform = 1;
 
-    // std::cout << A * B << std::endl;
+    Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
+                    gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
+                    X(num_samples, dim), Xi(num_deform, dim);
+    // Test points
+    X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
 
-    // std::cout << "-------------------------\n";
+    // Attractor
+    Eigen::Vector2d a(0.3, 0.7);
 
-    // Eigen::Tensor<double, 2> At = tools::TensorCast(A, 3, 3),
-    //                          Bt = tools::TensorCast(B, 3, 3);
+    // Dynamics
+    double time = 0, max_time = 50, dt = 0.001;
+    size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
 
-    // Eigen::array<Eigen::IndexPair<int>, 1> prod_dims = {Eigen::IndexPair<int>(1, 0)};
+    dynamics::MassSpringDamper<manifolds::Sphere> msd(dim);
+    msd.setAttractor(a);
+    msd.setDissipativeFactor(Eigen::MatrixXd::Identity(dim, dim) * 3);
+    msd.setPotentialFactor(Eigen::MatrixXd::Identity(dim, dim) * 2);
 
-    // std::cout << At.contract(Bt, prod_dims) << std::endl;
+    integrator::ForwardEuler<Params> integrator;
+    integrator.setStep(dt);
 
-    std::vector<double> v = {1, 2, 3, 4, 5};
+    Eigen::VectorXd x = Eigen::Vector2d(1, 1), v = Eigen::Vector2d(-1, 1);
+    std::cout << msd(x, v).transpose() << std::endl;
+    std::cout << msd.manifold().embedding(a).transpose() << std::endl;
+    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
 
-    std::cout << "vector: ";
-    for (auto& i : v)
-        std::cout << i << " ";
-    std::cout << std::endl;
+    Eigen::VectorXd potential(num_samples);
+    Eigen::MatrixXd embedding(num_samples, dim + 1), potentialGrad(num_samples, dim);
 
-    std::iter_swap(v.begin() + 2, v.begin() + 3);
-    std::swap(v[2], v[3]);
+    for (size_t i = 0; i < num_samples; i++) {
+        embedding.row(i) = msd.manifold().embedding(X.row(i));
+        potential(i) = msd.potentialEnergy(X.row(i));
+        potentialGrad.row(i) = msd.potentialGrad(X.row(i)) / msd.potentialGrad(X.row(i)).norm();
+    }
 
-    std::cout << "vector swapped: ";
-    for (auto& i : v)
-        std::cout << i << " ";
-    std::cout << std::endl;
+    record.row(0)(0) = time;
+    record.row(0).segment(1, dim) = x;
+    record.row(0).segment(dim + 1, dim) = v;
 
-    size_t dim = 3;
+    while (time < max_time && index < num_steps - 1) {
+        // Velocity
+        v = v + dt * msd(x, v);
 
-    manifolds::Sphere sphere(dim);
+        // Position
+        x = x + v * dt;
 
-    // Eigen::Vector2d x(0.933993247757551, 0.678735154857773);
-    Eigen::VectorXd x = Eigen::VectorXd::Random(dim);
+        // Step forward
+        time += dt;
+        index++;
 
-    // std::span<double> s = {x.data(), dim};
+        // Record
+        record.row(index)(0) = time;
+        record.row(index).segment(1, dim) = x;
+        record.row(index).segment(dim + 1, dim) = v;
+    }
 
-    // std::cout << "span: ";
-    // for (auto const i : s)
-    //     std::cout << i << " ";
-    // std::cout << std::endl;
+    Eigen::MatrixXd projection(record.rows(), dim + 1);
 
-    std::cout << x.transpose() << std::endl;
+    for (size_t i = 0; i < record.rows(); i++)
+        projection.row(i) = msd.manifold().embedding(record.row(i).segment(1, dim));
 
-    std::cout << "-------------------------\n";
-
-    std::cout << sphere.embedding(x).transpose() << std::endl;
-
-    std::cout << "-------------------------\n";
-
-    std::cout << sphere.jacobian(x) << std::endl;
-
-    std::cout << "-------------------------\n";
-
-    std::cout << sphere.metric(x) << std::endl;
-
-    std::cout << "-------------------------\n";
-
-    std::cout << sphere.jacobian(x).transpose() * sphere.jacobian(x) << std::endl;
-
-    std::cout << "-------------------------\n";
-
-    std::cout << sphere.metricGrad(x) << std::endl;
-
-    std::cout << "-------------------------\n";
-
-    std::cout << sphere.christoffel(x) << std::endl;
+    FileManager io_manager;
+    io_manager.setFile("rsc/sphere_space.csv");
+    io_manager.write("CHART", X, "EMBEDDING", embedding, "FUNCTION", potential, "GRAD", potentialGrad, "RECORD", record, "PROJECTION", projection);
 
     return 0;
 }

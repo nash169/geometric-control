@@ -14,6 +14,11 @@ namespace geometric_control {
 
             return 0.5 * (gInv.contract(gGrad + gGrad.shuffle(Eigen::array<int, 3>({0, 2, 1})), c1) - gInv.contract(gGrad, c2));
         }
+
+        Eigen::MatrixXd pullback(const Eigen::MatrixXd& g, const Eigen::MatrixXd& df)
+        {
+            return df.transpose() * g * df;
+        }
     } // namespace tools
 } // namespace geometric_control
 #endif // GEOMETRIC_CONTROL_TOOLS_MATH_HPP

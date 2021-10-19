@@ -197,6 +197,24 @@ namespace geometric_control {
         {
             return Mod(fAng, _TWO_PI);
         }
+
+        // Get Eigen Vector from double
+        Eigen::VectorXd makeVector(double num)
+        {
+            Eigen::VectorXd vec(1);
+            vec << num;
+
+            return vec;
+        }
+
+        // Get Eigen Matrix from double
+        Eigen::MatrixXd makeMatrix(double num)
+        {
+            Eigen::MatrixXd mat(1, 1);
+            mat << num;
+
+            return mat;
+        }
     } // namespace tools
 
 } // namespace geometric_control

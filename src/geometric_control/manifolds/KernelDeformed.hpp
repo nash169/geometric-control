@@ -13,11 +13,17 @@ namespace geometric_control {
         template <typename Params, typename Kernel = kernels::SquaredExp<Params>>
         class KernelDeformed : public AbstractManifold {
         public:
-            KernelDeformed(const size_t& dim) : AbstractManifold(dim)
+            KernelDeformed(const size_t& dim) : AbstractManifold(dim) {}
+
+            // Set the space deformation points and weights
+            KernelDeformed& setDeformations(const Eigen::MatrixXd& x, const Eigen::VectorXd w)
             {
+                _f.setSamples(x).setWeights(w);
+                return *this;
             }
 
-            Eigen::VectorXd embedding(const Eigen::VectorXd& x) override
+            // Embedding
+            Eigen::VectorXd embedding(const Eigen::VectorXd& x) const override
             {
                 Eigen::VectorXd y(x.rows() + 1);
                 y.segment(0, x.rows()) = x;
@@ -26,7 +32,8 @@ namespace geometric_control {
                 return y;
             }
 
-            Eigen::MatrixXd jacobian(const Eigen::VectorXd& x)
+            // Jacobian
+            Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
                 // Dimension
                 size_t d = x.rows();
@@ -40,8 +47,15 @@ namespace geometric_control {
                 return jac;
             }
 
-            /* Metric */
-            Eigen::MatrixXd metric(const Eigen::VectorXd& x) override
+            // Hessian
+            Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
+            {
+                Eigen::Tensor<double, 3> hess(_d, _d, _d);
+                return hess;
+            }
+
+            // Metric
+            Eigen::MatrixXd metric(const Eigen::VectorXd& x) const override
             {
                 Eigen::MatrixXd g = _f.grad(x) * _f.grad(x).transpose();
                 g.diagonal().array() += 1;
@@ -49,7 +63,16 @@ namespace geometric_control {
                 return g;
             }
 
-            Eigen::Tensor<double, 3> metricGrad(const Eigen::VectorXd& x)
+            // Christoffel symbols
+            Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) const override
+            {
+                return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
+            }
+
+        protected:
+            utils::Expansion<Params, Kernel> _f;
+
+            Eigen::Tensor<double, 3> metricGrad(const Eigen::VectorXd& x) const
             {
                 // Dimension
                 u_int d = x.rows();
@@ -64,22 +87,6 @@ namespace geometric_control {
 
                 return grad;
             }
-
-            /* Christoffel symbols */
-            Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) override
-            {
-                return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
-            }
-
-            KernelDeformed& setDeformations(const Eigen::MatrixXd& x, const Eigen::VectorXd w)
-            {
-                _f.setSamples(x).setWeights(w);
-
-                return *this;
-            }
-
-        protected:
-            utils::Expansion<Params, Kernel> _f;
         };
     } // namespace manifolds
 } // namespace geometric_control

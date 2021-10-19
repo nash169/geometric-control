@@ -7,3 +7,6 @@ Differential geometry applied to task/configuration space control.
 - https://romanpoya.medium.com/a-look-at-the-performance-of-expression-templates-in-c-eigen-vs-blaze-vs-fastor-vs-armadillo-vs-2474ed38d982
 - https://stackoverflow.com/questions/40829887/how-do-i-do-outer-product-of-tensors-in-eigen/49299922
 - http://eigen.tuxfamily.org/dox-devel/unsupported/eigen_tensors.html
+
+### Consideration
+In the designing this library it should be found the right balance run-time flexibility, performance and ease of coding.

@@ -14,26 +14,28 @@ namespace geometric_control {
                 _center.setZero(dim + 1);
             }
 
-            ~Sphere() {}
-
+            // Get radius
             const double& radius() { return _radius; }
 
+            // Get center
             const Eigen::VectorXd& center() { return _center; }
 
+            // Set radius
             Sphere& setRadius(const double& radius)
             {
                 _radius = radius;
                 return *this;
             }
 
+            // Set center
             Sphere& setCenter(const Eigen::VectorXd& center)
             {
                 _center = center;
                 return *this;
             }
 
-            /* Euclidean Embedding */
-            Eigen::VectorXd embedding(const Eigen::VectorXd& x) override
+            // Embedding
+            Eigen::VectorXd embedding(const Eigen::VectorXd& x) const override
             {
                 // Dimension
                 size_t d = x.rows();
@@ -51,7 +53,8 @@ namespace geometric_control {
                 return y;
             }
 
-            Eigen::MatrixXd jacobian(const Eigen::VectorXd& x)
+            // Jacobian
+            Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
                 // Dimension
                 size_t d = x.rows();
@@ -79,14 +82,16 @@ namespace geometric_control {
                 return jac;
             }
 
-            Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x)
+            // Hessian
+            Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
                 Eigen::Tensor<double, 3> hess;
 
                 return hess;
             }
 
-            Eigen::MatrixXd metric(const Eigen::VectorXd& x) override
+            // Metric
+            Eigen::MatrixXd metric(const Eigen::VectorXd& x) const override
             {
                 // Dimension
                 size_t d = x.rows();
@@ -101,12 +106,7 @@ namespace geometric_control {
                 return g;
             }
 
-            Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) override
-            {
-                return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
-            }
-
-            Eigen::Tensor<double, 3> metricGrad(const Eigen::VectorXd& x)
+            Eigen::Tensor<double, 3> metricGrad(const Eigen::VectorXd& x) const
             {
                 // Dimension
                 u_int d = x.rows();
@@ -123,6 +123,12 @@ namespace geometric_control {
                     }
 
                 return grad;
+            }
+
+            // Christoffel symbols
+            Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) const override
+            {
+                return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
             }
 
             double distance(const Eigen::VectorXd& x, const Eigen::VectorXd& y)

@@ -8,10 +8,10 @@ namespace geometric_control {
         template <typename Manifold>
         class MassSpringDamper : public AbstractDynamics<Manifold> {
         public:
-            MassSpringDamper(const size_t& dimension) : AbstractDynamics<Manifold>(dimension)
+            MassSpringDamper(const size_t& dim) : AbstractDynamics<Manifold>(dim)
             {
-                _K = Eigen::MatrixXd::Identity(dimension, dimension);
-                _D = Eigen::MatrixXd::Identity(dimension, dimension);
+                _K = Eigen::MatrixXd::Identity(dim, dim);
+                _D = Eigen::MatrixXd::Identity(dim, dim);
             }
 
             ~MassSpringDamper() {}

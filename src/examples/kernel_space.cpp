@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
     // Gradient metric
     std::cout << "GRADIENT METRIC" << std::endl;
-    std::cout << deformedSpace.metricGrad(X.row(5056)) << std::endl;
+    // std::cout << deformedSpace.metricGrad(X.row(5056)) << std::endl;
 
     // Christoffel symbols
     std::cout << "CHRISTOFFEL SYMBOLS" << std::endl;

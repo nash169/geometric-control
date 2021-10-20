@@ -161,9 +161,14 @@ namespace geometric_control {
             /* Euclidean Embedding */
 
             // Projector (project over the tangent space in the Euclidean embedding)
-            Eigen::VectorXd projector(const Eigen::VectorXd& x, const Eigen::VectorXd& u) const
+            Eigen::Matrix<double, (N == -1) ? N : N + 1, 1> projector(const Eigen::Matrix<double, (N == -1) ? N : N + 1, 1>& x, const Eigen::Matrix<double, (N == -1) ? N : N + 1, 1>& u) const
             {
                 return u - (x.transpose() * u) * x;
+            }
+
+            Eigen::Matrix<double, (N == -1) ? N : N + 1, 1> retraction(const Eigen::Matrix<double, (N == -1) ? N : N + 1, 1>& x, const Eigen::Matrix<double, (N == -1) ? N : N + 1, 1>& u, const double& t = 1) const
+            {
+                return (x + t * u) / (x + t * u).norm();
             }
 
             // Distance in the Euclidean embedding

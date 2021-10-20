@@ -62,14 +62,14 @@ int main(int argc, char** argv)
     Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
     record.row(0)(0) = time;
     record.row(0).segment(1, dim + 1) = x;
-    record.row(0).segment(dim + 1, dim + 1) = v;
+    record.row(0).segment(dim + 2, dim + 1) = v;
 
     while (time < max_time && index < num_steps - 1) {
         // Velocity
-        v = v + dt * ds(x, v);
+        v = v + dt * Manifold().projector(x, ds(x, v));
 
         // Position
-        x = x + v * dt;
+        x = Manifold().retraction(x, v, dt);
 
         // Step forward
         time += dt;
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
         // Record
         record.row(index)(0) = time;
         record.row(index).segment(1, dim + 1) = x;
-        record.row(index).segment(dim + 1, dim + 1) = v;
+        record.row(index).segment(dim + 2, dim + 1) = v;
     }
 
     FileManager io_manager;

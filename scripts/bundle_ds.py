@@ -32,7 +32,9 @@ surf = ax.plot_surface(
 fig.colorbar(surf, ax=ax)
 
 ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black")
-ax.scatter(0.0707372, -0.987513,  0.140767)
+ax.scatter(0.0707372, -0.987513,  0.140767, color="red")
+ax.scatter(ds[0, 1], ds[0, 2], ds[0, 3], color="black")
+
 
 # DYNAMICS
 fig = plt.figure()

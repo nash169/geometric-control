@@ -27,13 +27,14 @@ surf = ax.plot_surface(
     embedding[:, 2].reshape((res, res), order='F'),
     facecolors=cm.jet(function.reshape(
         (res, res), order='F')/np.amax(function)),
-    antialiased=False, linewidth=0, alpha=0.2
+    antialiased=False, linewidth=0, alpha=0.3
 )
 fig.colorbar(surf, ax=ax)
 
 ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black")
 ax.scatter(0.0707372, -0.987513,  0.140767, color="red")
 ax.scatter(ds[0, 1], ds[0, 2], ds[0, 3], color="black")
+ax.scatter(ds[-1, 1], ds[-1, 2], ds[-1, 3], color="blue")
 
 
 # DYNAMICS

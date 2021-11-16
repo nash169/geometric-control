@@ -9,6 +9,7 @@
 
 // Tasks
 #include <geometric_control/tasks/DissipativeEnergy.hpp>
+#include <geometric_control/tasks/ObstacleAvoidance.hpp>
 #include <geometric_control/tasks/PotentialEnergy.hpp>
 
 using namespace geometric_control;

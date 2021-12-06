@@ -8,7 +8,40 @@ namespace geometric_control {
         template <typename Manifold>
         class ObstacleAvoidance : public AbstractTask<Manifold> {
         public:
-            ObstacleAvoidance() : AbstractTask<Manifold>() {}
+            ObstacleAvoidance() : AbstractTask<Manifold>()
+            {
+                // Init obstacle center to radius distance
+                _r = 1;
+
+                // Init obstacle center
+                _c.setZero();
+
+                // Init metric params
+                _a = 1;
+                _b = 2;
+            }
+
+            // Set radius
+            ObstacleAvoidance& setRadius(const double& r)
+            {
+                _r = r;
+                return *this;
+            }
+
+            // Set center
+            ObstacleAvoidance& setCenter(const Eigen::VectorXd& c)
+            {
+                _c = c;
+                return *this;
+            }
+
+            // Set metric parameters
+            ObstacleAvoidance& setMetricParams(const double& a, const double& b)
+            {
+                _a = a;
+                _b = b;
+                return *this;
+            }
 
             // Optimization weight
             Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
@@ -19,34 +52,36 @@ namespace geometric_control {
             // Map between configuration and task manifolds
             Eigen::VectorXd map(const Eigen::VectorXd& x) const override
             {
-                return x;
+                return tools::makeVector(_M.distEE(_c, x) - _r);
             }
 
             // Jacobian
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return Eigen::MatrixXd::Identity(x.rows(), x.rows());
+                return _M.distEEGrad(_c, x).transpose();
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                Eigen::Tensor<double, 3> hess(x.rows(), x.rows(), x.rows());
-                hess.setZero();
-                return hess;
+                return return tools::TensorCast(_M.distEEHess(_c, x), 1, x.rows(), x.rows());
             }
 
             // Task manifold metric
             Eigen::MatrixXd metric(const Eigen::VectorXd& x) const override
             {
-                return Eigen::MatrixXd::Identity(x.rows(), x.rows());
+                double y = map(x)[0];
+                return tools::makeMatrix(std::exp(_a / (_b * std::pow(y, _b))));
             }
 
             // Connection functions
             Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) const override
             {
-                Eigen::Tensor<double, 3> gamma(x.rows(), x.rows(), x.rows());
-                gamma.setZero();
+                double y = map(x)[0];
+
+                Eigen::Tensor<double, 3> gamma(1, 1, 1);
+                gamma(0, 0, 0) = -0.5 * std::pow(_a / (_b * std::log(y)), 1 / _b) * _a / std::pow(y, _b + 1) * metric(x)[0, 0];
+
                 return gamma;
             }
 
@@ -73,6 +108,13 @@ namespace geometric_control {
         protected:
             // Manifold
             using AbstractTask<Manifold>::_M;
+
+            // Obstacle radius and center position (for the moment 2D/3D sphere)
+            double _r;
+            Eigen::Vector3d _c;
+
+            // Metric parmeters
+            double _a, _b;
         };
     } // namespace tasks
 } // namespace geometric_control

@@ -14,13 +14,14 @@ namespace geometric_control {
             Eigen::VectorXd attractor() const { return _a; }
             Eigen::VectorXd stiffness() const { return _K; }
 
-            // Set attractor & stiffness
+            // Set attractor
             PotentialEnergy& setAttractor(const Eigen::VectorXd& x)
             {
                 _a = x;
                 return *this;
             }
 
+            // Set stiffness
             PotentialEnergy& setStiffness(const Eigen::MatrixXd& K)
             {
                 _K = K;

@@ -35,7 +35,10 @@ int main(int argc, char** argv)
     dynamics::BundleDynamics<Manifold> ds;
 
     // Assign potential and dissipative task to the DS
-    ds.addTasks(std::make_unique<tasks::PotentialEnergy<Manifold>>(), std::make_unique<tasks::DissipativeEnergy<Manifold>>());
+    ds.addTasks(
+        std::make_unique<tasks::PotentialEnergy<Manifold>>(),
+        std::make_unique<tasks::DissipativeEnergy<Manifold>>(),
+        std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
 
     // Attractor
     Eigen::Vector3d a = Manifold().embedding(Eigen::Vector2d(1.5, 3));

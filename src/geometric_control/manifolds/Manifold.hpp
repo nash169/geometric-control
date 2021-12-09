@@ -18,6 +18,8 @@ namespace geometric_control {
             /* Euclidean Embedding */
             virtual Eigen::Matrix<double, (N == -1) ? N : N + 1, 1> embedding(const Eigen::Matrix<double, N, 1>& x) const = 0;
 
+            virtual ~Manifold() {}
+
             // /* Jacobian of the Euclidean Embedding */
             // virtual Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const = 0;
 
@@ -29,6 +31,8 @@ namespace geometric_control {
 
             // /* Christoffel symbols (based on the pulled back metric) */
             // virtual Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) const = 0;
+
+            static constexpr int dimension() { return N; }
         };
     } // namespace manifolds
 } // namespace geometric_control

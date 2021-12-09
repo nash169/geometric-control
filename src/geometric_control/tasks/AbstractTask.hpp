@@ -10,6 +10,8 @@ namespace geometric_control {
         public:
             AbstractTask() : _M() {}
 
+            virtual ~AbstractTask() {}
+
             // Optimization weight
             virtual Eigen::MatrixXd weight(const Eigen::VectorXd&, const Eigen::VectorXd&) const = 0;
 

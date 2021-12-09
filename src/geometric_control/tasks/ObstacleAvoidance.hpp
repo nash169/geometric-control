@@ -14,7 +14,7 @@ namespace geometric_control {
                 _r = 1;
 
                 // Init obstacle center
-                _c.setZero();
+                _c.setZero(Manifold::dimension());
 
                 // Init metric params
                 _a = 1;
@@ -64,7 +64,7 @@ namespace geometric_control {
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                return return tools::TensorCast(_M.distEEHess(_c, x), 1, x.rows(), x.rows());
+                return tools::TensorCast(_M.distEEHess(_c, x), 1, x.rows(), x.rows());
             }
 
             // Task manifold metric
@@ -80,7 +80,7 @@ namespace geometric_control {
                 double y = map(x)[0];
 
                 Eigen::Tensor<double, 3> gamma(1, 1, 1);
-                gamma(0, 0, 0) = -0.5 * std::pow(_a / (_b * std::log(y)), 1 / _b) * _a / std::pow(y, _b + 1) * metric(x)[0, 0];
+                gamma(0, 0, 0) = -0.5 * std::pow(_a / (_b * std::log(y)), 1 / _b) * _a / std::pow(y, _b + 1) * metric(x).coeffRef(0, 0);
 
                 return gamma;
             }
@@ -111,7 +111,7 @@ namespace geometric_control {
 
             // Obstacle radius and center position (for the moment 2D/3D sphere)
             double _r;
-            Eigen::Vector3d _c;
+            Eigen::VectorXd _c; // this can be Eigen::Matrix<double, Manifold::dimension(), 1>
 
             // Metric parmeters
             double _a, _b;

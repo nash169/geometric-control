@@ -13,8 +13,8 @@ namespace geometric_control {
                 // Init obstacle center to radius distance
                 _r = 1;
 
-                // Init obstacle center
-                _c.setZero(Manifold::dimension());
+                // Init obstacle center (in the embedding space)
+                _c = _M.embedding(Eigen::VectorXd::Zero(Manifold::dimension()));
 
                 // Init metric params
                 _a = 1;
@@ -29,9 +29,10 @@ namespace geometric_control {
             }
 
             // Set center
+            // In order to avoid issues the center location is always passed in chart coordinate
             ObstacleAvoidance& setCenter(const Eigen::VectorXd& c)
             {
-                _c = c;
+                _c = _M.embedding(c);
                 return *this;
             }
 
@@ -46,7 +47,7 @@ namespace geometric_control {
             // Optimization weight
             Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
-                return Eigen::MatrixXd::Identity(x.rows(), x.rows());
+                return tools::makeMatrix(1);
             }
 
             // Map between configuration and task manifolds
@@ -80,7 +81,7 @@ namespace geometric_control {
                 double y = map(x)[0];
 
                 Eigen::Tensor<double, 3> gamma(1, 1, 1);
-                gamma(0, 0, 0) = -0.5 * std::pow(_a / (_b * std::log(y)), 1 / _b) * _a / std::pow(y, _b + 1) * metric(x).coeffRef(0, 0);
+                gamma(0, 0, 0) = -0.5 * _a / std::pow(y, _b + 1);
 
                 return gamma;
             }
@@ -94,15 +95,13 @@ namespace geometric_control {
             // Energy gradient field -> (1,0) tensor field when sharped
             Eigen::VectorXd energyGrad(const Eigen::VectorXd& x) const override
             {
-                return Eigen::VectorXd::Zero(x.rows());
+                return tools::makeVector(0);
             }
 
             // (Co-vector) field -> (0,1) tensor field
             Eigen::VectorXd field(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
-                Eigen::VectorXd field = Eigen::VectorXd::Zero(x.rows());
-
-                return field;
+                return tools::makeVector(0);
             }
 
         protected:

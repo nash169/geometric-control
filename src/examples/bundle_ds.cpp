@@ -46,6 +46,7 @@ int main(int argc, char** argv)
     // Set tasks' properties
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(0)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
     static_cast<tasks::DissipativeEnergy<Manifold>&>(ds.task(1)).setDissipativeFactor(Eigen::Matrix3d::Identity());
+    static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.1);
 
     // Embedding
     Eigen::VectorXd potential(num_samples);
@@ -68,26 +69,39 @@ int main(int argc, char** argv)
     record.row(0).segment(1, dim + 1) = x;
     record.row(0).segment(dim + 2, dim + 1) = v;
 
-    while (time < max_time && index < num_steps - 1) {
-        // Velocity
-        v = v + dt * Manifold().projector(x, ds(x, v));
+    // std::cout << "hello" << std::endl;
+    // ds(x, v);
+    // std::cout << "hello2" << std::endl;
+    // std::cout << x.transpose() << std::endl;
+    // std::cout << Manifold().embedding(Eigen::Vector2d(0, 0)).transpose() << std::endl;
 
-        // Position
-        x = Manifold().retraction(x, v, dt);
+    // std::cout << static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).weight(x, v) << std::endl;
+    // std::cout << static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).map(x) << std::endl;
+    // std::cout << static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).jacobian(x) << std::endl;
+    // std::cout << static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).hessian(x) << std::endl;
+    // std::cout << static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).metric(x) << std::endl;
+    std::cout << static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).christoffel(x) << std::endl;
 
-        // Step forward
-        time += dt;
-        index++;
+    // while (time < max_time && index < num_steps - 1) {
+    //     // Velocity
+    //     v = v + dt * Manifold().projector(x, ds(x, v));
 
-        // Record
-        record.row(index)(0) = time;
-        record.row(index).segment(1, dim + 1) = x;
-        record.row(index).segment(dim + 2, dim + 1) = v;
-    }
+    //     // Position
+    //     x = Manifold().retraction(x, v, dt);
 
-    FileManager io_manager;
-    io_manager.setFile("rsc/sphere_bundle.csv");
-    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential);
+    //     // Step forward
+    //     time += dt;
+    //     index++;
+
+    //     // Record
+    //     record.row(index)(0) = time;
+    //     record.row(index).segment(1, dim + 1) = x;
+    //     record.row(index).segment(dim + 2, dim + 1) = v;
+    // }
+
+    // FileManager io_manager;
+    // io_manager.setFile("rsc/sphere_bundle.csv");
+    // io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential);
 
     return 0;
 }

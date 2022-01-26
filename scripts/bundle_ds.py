@@ -31,10 +31,26 @@ surf = ax.plot_surface(
 )
 fig.colorbar(surf, ax=ax)
 
+# trajectory
 ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black")
+# target
 ax.scatter(0.0707372, -0.987513,  0.140767, color="red")
+# init pos
 ax.scatter(ds[0, 1], ds[0, 2], ds[0, 3], color="black")
+# end pos
 ax.scatter(ds[-1, 1], ds[-1, 2], ds[-1, 3], color="blue")
+# init vel
+ax.quiver(ds[0, 1], ds[0, 2], ds[0, 3], ds[0, 4],
+          ds[0, 5], ds[0, 6], length=0.25)
+
+# OBSTAClE
+r = 0.4
+c = np.array([0.362358, -0.872814, -0.326944])
+u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+x = c[0] + r*np.cos(u)*np.sin(v)
+y = c[1] + r*np.sin(u)*np.sin(v)
+z = c[2] + r*np.cos(v)
+ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
 
 
 # DYNAMICS

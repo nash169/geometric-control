@@ -1,10 +1,10 @@
 #include <iostream>
 
 #include <geometric_control/GeometricControl.hpp>
-#include <utils_cpp/FileManager.hpp>
+#include <utils_lib/FileManager.hpp>
 
 using namespace geometric_control;
-using namespace utils_cpp;
+using namespace utils_lib;
 
 struct Params {
     struct kernel : public defaults::kernel {
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
     std::cout << "CHRISTOFFEL SYMBOLS" << std::endl;
     std::cout << deformedSpace.christoffel(X.row(5056)) << std::endl;
 
-    utils_cpp::FileManager io_manager;
+    utils_lib::FileManager io_manager;
     io_manager.setFile("rsc/kernel_space.csv");
     io_manager.write("SAMPLES", samples);
 

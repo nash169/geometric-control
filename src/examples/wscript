@@ -17,9 +17,9 @@ def build(bld):
     sources = [f[len(bld.path.abspath()) + 1:] for f in sources]
 
     # External required libraries for the examples
-    example_required = {"kernel_space.cpp": ["UTILSCPP"],
-                        "sphere_space.cpp": ["UTILSCPP"],
-                        "sphere_msd.cpp": ["UTILSCPP", "INTEGRATOR"]}
+    example_required = {"kernel_space.cpp": ["UTILSLIB"],
+                        "sphere_space.cpp": ["UTILSLIB"],
+                        "sphere_msd.cpp": ["UTILSLIB", "INTEGRATORLIB"]}
 
     # External optional libraries for the examples
     example_optional = {}

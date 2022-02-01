@@ -1,5 +1,5 @@
 #include <iostream>
-#include <utils_cpp/FileManager.hpp>
+#include <utils_lib/FileManager.hpp>
 
 // Bundle DS
 #include <geometric_control/dynamics/BundleDynamics.hpp>
@@ -13,7 +13,7 @@
 #include <geometric_control/tasks/PotentialEnergy.hpp>
 
 using namespace geometric_control;
-using namespace utils_cpp;
+using namespace utils_lib;
 
 int main(int argc, char** argv)
 {

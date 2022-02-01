@@ -5,10 +5,10 @@
 #include <geometric_control/manifolds/Sphere.hpp>
 
 #include <integrator_lib/Integrate.hpp>
-#include <utils_cpp/FileManager.hpp>
+#include <utils_lib/FileManager.hpp>
 
 using namespace geometric_control;
-using namespace utils_cpp;
+using namespace utils_lib;
 using namespace integrator_lib;
 
 struct Params {

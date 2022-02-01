@@ -13,9 +13,9 @@ blddir = "build"
 
 # Tools' name and directory
 tools = {
-    "kernel_lib": "",
-    "utils_cpp": "",
-    "integrator_lib": "",
+    "kernellib": "",
+    "utilslib": "",
+    "integratorlib": "",
 }
 
 

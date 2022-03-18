@@ -10,8 +10,10 @@ namespace geometric_control {
         public:
             PotentialEnergy() : AbstractTask<Manifold>() {}
 
-            // Get attractor & stiffness
+            // Get attractor
             Eigen::VectorXd attractor() const { return _a; }
+
+            // Get stiffness
             Eigen::VectorXd stiffness() const { return _K; }
 
             // Set attractor

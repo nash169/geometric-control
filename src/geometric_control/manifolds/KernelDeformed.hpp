@@ -11,9 +11,9 @@ using namespace kernel_lib;
 namespace geometric_control {
     namespace manifolds {
         template <typename Params, typename Kernel = kernels::SquaredExp<Params>>
-        class KernelDeformed : public AbstractManifold {
+        class KernelDeformed : public AbstractManifold<Eigen::Dynamic, 1> {
         public:
-            KernelDeformed(const size_t& dim) : AbstractManifold(dim) {}
+            KernelDeformed() = default;
 
             // Set the space deformation points and weights
             KernelDeformed& setDeformations(const Eigen::MatrixXd& x, const Eigen::VectorXd w)
@@ -50,7 +50,7 @@ namespace geometric_control {
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                Eigen::Tensor<double, 3> hess(_d, _d, _d);
+                Eigen::Tensor<double, 3> hess(x.size() + 1, x.size(), x.size());
                 return hess;
             }
 

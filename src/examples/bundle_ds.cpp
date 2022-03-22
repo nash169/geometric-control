@@ -15,24 +15,55 @@
 using namespace geometric_control;
 using namespace utils_lib;
 
+// Define the nodes in the tree dynamics
+using TreeManifoldsImpl = TreeManifolds<manifolds::Sphere<2>>;
+
+// Tree Mapping
+template <typename ParentManifold>
+class ManifoldsMapping : public TreeManifoldsImpl {
+    Eigen::VectorXd map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override
+    {
+        return Eigen::VectorXd::Zero(x.size());
+    }
+
+    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override
+    {
+        return Eigen::MatrixXd::Zero(x.size(), x.size());
+    }
+
+    Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override
+    {
+        Eigen::Tensor<double, 3> hess(x.size(), x.size(), x.size());
+        hess.setZero();
+        return hess;
+    }
+};
+
+// Parent Manifold map specialization
+template <>
+Eigen::VectorXd ManifoldsMapping<manifolds::Sphere<2>>::map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold)
+{
+    return Eigen::VectorXd::Ones(x.size());
+}
+
 int main(int argc, char** argv)
 {
-    // // Data
-    // double box[] = {0, M_PI, 0, 2 * M_PI};
-    // constexpr size_t dim = 2;
-    // size_t resolution = 100, num_samples = resolution * resolution;
+    // Data
+    double box[] = {0, M_PI, 0, 2 * M_PI};
+    constexpr size_t dim = 2;
+    size_t resolution = 100, num_samples = resolution * resolution;
 
-    // Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
-    //                 gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
-    //                 X(num_samples, dim);
-    // // Test points
-    // X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
+    Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
+                    gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
+                    X(num_samples, dim);
+    // Test points
+    X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
 
-    // // Define base manifold
-    // using Manifold = manifolds::SphereN<dim>;
+    // Define base manifold
+    using Manifold = manifolds::Sphere<dim>;
 
-    // // Create DS on a specific manifold
-    // dynamics::BundleDynamics<Manifold> ds;
+    // Create DS on a specific manifold
+    dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
 
     // // Assign potential and dissipative task to the DS
     // ds.addTasks(

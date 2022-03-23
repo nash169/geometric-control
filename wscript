@@ -16,6 +16,8 @@ tools = {
     "kernellib": "",
     "utilslib": "",
     "integratorlib": "",
+    "beautifulbullet": "",
+    "graphicslib": "",
 }
 
 
@@ -49,7 +51,7 @@ def configure(cfg):
     cfg.load("compiler_cxx clang_compilation_database")
 
     # Define require libraries
-    cfg.get_env()["requires"] += ["EIGEN", "KERNEL"]
+    cfg.get_env()["requires"] += ["EIGEN", "KERNELLIB"]
 
     # Load tools configuration
     cfg.load("flags eigen", tooldir="waf_tools")
@@ -61,6 +63,7 @@ def configure(cfg):
 
     # Remove duplicates
     cfg.get_env()["libs"] = list(set(cfg.get_env()["libs"]))
+    cfg.get_env()["requires"] = list(set(cfg.get_env()["requires"]))
 
     # Set lib type
     if cfg.options.shared:

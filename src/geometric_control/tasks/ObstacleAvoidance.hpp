@@ -14,7 +14,7 @@ namespace geometric_control {
                 _r = 1;
 
                 // Init obstacle center (in the embedding space)
-                _c = _M.embedding(Eigen::VectorXd::Zero(Manifold::dimension()));
+                _c = _M.embedding(Eigen::VectorXd::Zero(Manifold::dim()));
 
                 // Init metric params
                 _a = 1;
@@ -53,19 +53,19 @@ namespace geometric_control {
             // Map between configuration and task manifolds
             Eigen::VectorXd map(const Eigen::VectorXd& x) const override
             {
-                return tools::makeVector(_M.distEE(_c, x) - _r);
+                return tools::makeVector(_M.dist(_c, x) - _r);
             }
 
             // Jacobian
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return _M.distEEGrad(_c, x).transpose();
+                return _M.distGrad(_c, x).transpose();
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                return tools::TensorCast(_M.distEEHess(_c, x), 1, x.rows(), x.rows());
+                return tools::TensorCast(_M.distHess(_c, x), 1, x.rows(), x.rows());
             }
 
             // Task manifold metric

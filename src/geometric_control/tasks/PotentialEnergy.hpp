@@ -39,19 +39,19 @@ namespace geometric_control {
             // Map between configuration and task manifolds
             Eigen::VectorXd map(const Eigen::VectorXd& x) const override
             {
-                return tools::makeVector(_M.distEE(_a, x));
+                return tools::makeVector(_M.dist(_a, x));
             }
 
             // Jacobian
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return _M.distEEGrad(_a, x).transpose();
+                return _M.distGrad(_a, x).transpose();
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                return tools::TensorCast(_M.distEEHess(_a, x), 1, x.rows(), x.rows());
+                return tools::TensorCast(_M.distHess(_a, x), 1, x.rows(), x.rows());
             }
 
             // Task manifold metric

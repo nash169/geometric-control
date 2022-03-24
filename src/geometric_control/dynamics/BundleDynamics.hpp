@@ -27,11 +27,12 @@ namespace geometric_control {
     template <typename T1>
     class Visitable<T1> {
     public:
-        virtual Eigen::VectorXd mapFrom(const Eigen::VectorXd& x, T1&) = 0; // accept
+        // accept
+        virtual Eigen::VectorXd mapFrom(const Eigen::VectorXd& x, T1&) = 0;
 
         virtual Eigen::MatrixXd jacobianFrom(const Eigen::VectorXd& x, T1&) = 0;
 
-        virtual Eigen::Tensor<double, 3> hessianFrom(const Eigen::VectorXd& x, T1&) = 0;
+        virtual Eigen::MatrixXd hessianFrom(const Eigen::VectorXd& x, const Eigen::VectorXd& v, T1&) = 0;
     };
 
     // Visitor
@@ -51,11 +52,12 @@ namespace geometric_control {
     template <typename T1>
     class Visitor<T1> {
     public:
-        virtual Eigen::VectorXd map(const Eigen::VectorXd& x, T1&) = 0; // visit
+        // visit
+        virtual Eigen::VectorXd map(const Eigen::VectorXd& x, T1&) = 0;
 
         virtual Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, T1&) = 0;
 
-        virtual Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x, T1&) = 0;
+        virtual Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, T1&) = 0;
     };
 
     // Tree of manifolds
@@ -130,30 +132,29 @@ namespace geometric_control {
             // Recursive map computation
             Eigen::VectorXd mapFrom(const Eigen::VectorXd& x, TreeManifoldsImpl& node) override
             {
-                _f.setZero(x.size());
+                // _f.setZero(x.size());
 
-                for (auto& bundle : _bundles)
-                    _f += bundle->mapFrom(x, _mapping);
+                // for (auto& bundle : _bundles)
+                //     _f += bundle->mapFrom(x, _mapping);
 
-                for (auto& task : _tasks)
-                    _f += task->map(x);
+                // for (auto& task : _tasks)
+                //     _f += task->map(x);
 
-                return _f + node.map(x, _manifold);
+                // return _f + node.map(x, _manifold);
+
+                return node.map(x, _manifold);
             }
 
             // Recursive jacobian computation
             Eigen::MatrixXd jacobianFrom(const Eigen::VectorXd& x, TreeManifoldsImpl& node) override
             {
-                _j.setZero(x.size(), x.size());
-                return _j;
+                return node.jacobian(x, _manifold);
             }
 
             // Recursive hessian computation
-            Eigen::Tensor<double, 3> hessianFrom(const Eigen::VectorXd& x, TreeManifoldsImpl& node) override
+            Eigen::MatrixXd hessianFrom(const Eigen::VectorXd& x, const Eigen::VectorXd& v, TreeManifoldsImpl& node) override
             {
-                _h = Eigen::Tensor<double, 3>(x.size(), x.size(), x.size());
-                _h.setZero();
-                return _h;
+                return node.hessian(x, v, _manifold);
             }
 
         protected:
@@ -165,8 +166,7 @@ namespace geometric_control {
 
             // Map, Jacobian, Hessian
             Eigen::VectorXd _f;
-            Eigen::MatrixXd _j;
-            Eigen::Tensor<double, 3> _h;
+            Eigen::MatrixXd _j, _h;
 
             // Tree mapping
             Mapping<Manifold> _mapping;

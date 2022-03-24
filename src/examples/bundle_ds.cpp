@@ -21,22 +21,9 @@ using TreeManifoldsImpl = TreeManifolds<manifolds::Sphere<2>>;
 // Tree Mapping
 template <typename ParentManifold>
 class ManifoldsMapping : public TreeManifoldsImpl {
-    Eigen::VectorXd map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override
-    {
-        return Eigen::VectorXd::Zero(x.size());
-    }
-
-    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override
-    {
-        return Eigen::MatrixXd::Zero(x.size(), x.size());
-    }
-
-    Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override
-    {
-        Eigen::Tensor<double, 3> hess(x.size(), x.size(), x.size());
-        hess.setZero();
-        return hess;
-    }
+    Eigen::VectorXd map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
+    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
+    Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 };
 
 // Parent Manifold map specialization

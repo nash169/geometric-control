@@ -44,6 +44,12 @@ namespace geometric_control {
                 return *this;
             }
 
+            // Space dimension
+            constexpr int dim() const override
+            {
+                return 1;
+            }
+
             // Optimization weight
             Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {

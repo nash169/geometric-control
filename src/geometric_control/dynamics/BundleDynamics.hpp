@@ -96,6 +96,21 @@ namespace geometric_control {
                             + task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m);
                 }
 
+                Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(x.rows(), x.rows());
+                Eigen::VectorXd b2 = Eigen::VectorXd::Zero(x.rows());
+
+                for (auto& task : _tasks) {
+                    Eigen::MatrixXd J = task->jacobian(x), w = task->weight(x, v);
+                    A2 += J.transpose() * w * J;
+                    b2 -= J.transpose() * w
+                        * (task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m
+                            + task->hessianDir(x, v) * v);
+                    // + (task->hessianDir(x, v) + J * task->christoffelDir(x, J * v)) * v);
+                    J.transpose() * task->christoffelDir(x, J * v) * v;
+                }
+
+                std::cout << A2.selfadjointView<Eigen::Upper>().llt().solve(b2).transpose() << std::endl;
+
                 return A.selfadjointView<Eigen::Upper>().llt().solve(b);
             }
 

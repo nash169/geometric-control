@@ -26,6 +26,9 @@ class FrankaRobot : public bodies::MultiBody {
 public:
     FrankaRobot() : bodies::MultiBody("rsc/iiwa/urdf/iiwa14.urdf"), _frame("lbr_iiwa_link_7") {}
 
+    static constexpr int dim() { return 7; }
+    static constexpr int eDim() { return 7; }
+
     Eigen::VectorXd map(const Eigen::VectorXd& q)
     {
         return this->setState(q).framePose(_frame);
@@ -191,6 +194,12 @@ int main(int argc, char** argv)
     std::cout << "DYNAMICS ACCELERATION" << std::endl;
     std::cout << s2(x, v).transpose() << std::endl;
 
+    // std::cout << "TEST" << std::endl;
+    // Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},
+    //                                        c2 = {Eigen::IndexPair<int>(2, 0)};
+    // auto r = static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(s2.task(2)).hessian(x).contract(geometric_control::tools::TensorCast(v), c2);
+    // // .contract(geometric_control::tools::TensorCast(v), c1)
+    // std::cout << r << std::endl;
     // while (time < max_time && index < num_steps - 1) {
     //     // Velocity
     //     v = v + dt * Manifold().projector(x, ds(x, v));

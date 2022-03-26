@@ -48,7 +48,7 @@ namespace geometric_control {
             virtual Eigen::MatrixXd christoffelDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v)
             {
                 Eigen::array<Eigen::IndexPair<int>, 1> c = {Eigen::IndexPair<int>(2, 0)};
-                return tools::MatrixCast(christoffel(x).contract(tools::TensorCast(v), c), dim(), dim());
+                return tools::MatrixCast(christoffel(x).contract(tools::TensorCast(jacobian(x) * v), c), dim(), dim());
             }
 
             // Energy scalar field -> (0,0) tensor field

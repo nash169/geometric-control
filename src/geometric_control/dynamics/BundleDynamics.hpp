@@ -104,9 +104,7 @@ namespace geometric_control {
                     A2 += J.transpose() * w * J;
                     b2 -= J.transpose() * w
                         * (task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m
-                            + task->hessianDir(x, v) * v);
-                    // + (task->hessianDir(x, v) + J * task->christoffelDir(x, J * v)) * v);
-                    J.transpose() * task->christoffelDir(x, J * v) * v;
+                            + (task->hessianDir(x, v) + task->christoffelDir(x, v) * J) * v);
                 }
 
                 std::cout << A2.selfadjointView<Eigen::Upper>().llt().solve(b2).transpose() << std::endl;

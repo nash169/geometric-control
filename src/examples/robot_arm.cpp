@@ -66,23 +66,26 @@ class ManifoldsMapping : public TreeManifoldsImpl {
     Eigen::VectorXd map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
     Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
     Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
+
+public:
+    ParentManifold* _manifold;
 };
 
 // Robot -> SE3
 template <>
 Eigen::VectorXd ManifoldsMapping<FrankaRobot>::map(const Eigen::VectorXd& x, manifolds::SpecialEuclidean<3>& manifold)
 {
-    return FrankaRobot().map(x);
+    return _manifold->map(x);
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<FrankaRobot>::jacobian(const Eigen::VectorXd& x, manifolds::SpecialEuclidean<3>& manifold)
 {
-    return FrankaRobot().jacobian(x);
+    return _manifold->jacobian(x);
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<FrankaRobot>::hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, manifolds::SpecialEuclidean<3>& manifold)
 {
-    return FrankaRobot().hessian(x, v);
+    return _manifold->hessian(x, v);
 }
 
 // SE3 -> S2
@@ -108,16 +111,16 @@ Eigen::MatrixXd ManifoldsMapping<manifolds::SpecialEuclidean<3>>::hessian(const 
 
 int main(int argc, char** argv)
 {
-    // Data
-    double box[] = {0, M_PI, 0, 2 * M_PI};
-    constexpr size_t dim = 2;
-    size_t resolution = 100, num_samples = resolution * resolution;
+    // // Data
+    // double box[] = {0, M_PI, 0, 2 * M_PI};
+    // constexpr size_t dim = 2;
+    // size_t resolution = 100, num_samples = resolution * resolution;
 
-    Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
-                    gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
-                    X(num_samples, dim);
-    // Test points
-    X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
+    // Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
+    //                 gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
+    //                 X(num_samples, dim);
+    // // Test points
+    // X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
 
     // Create Bundle DS for each manifold
     dynamics::BundleDynamics<FrankaRobot, TreeManifoldsImpl, ManifoldsMapping> robot;
@@ -131,30 +134,30 @@ int main(int argc, char** argv)
         v1 = Eigen::VectorXd::Random(7);
     x1 << 0., 0.7, 0.4, 0.6, 0.3, 0.5, 0.1;
 
-    std::cout << "ROBOT to SE3" << std::endl;
-    ManifoldsMapping<FrankaRobot> robotTose3;
-    std::cout << "map" << std::endl;
-    Eigen::VectorXd x2 = se3.mapFrom(x1, robotTose3);
-    std::cout << x2.transpose() << std::endl;
-    std::cout << "jacobian" << std::endl;
-    Eigen::VectorXd v2 = se3.jacobianFrom(x1, robotTose3) * v1;
-    std::cout << v2.transpose() << std::endl;
-    std::cout << "hessian" << std::endl;
-    std::cout << se3.hessianFrom(x1, v1, robotTose3) << std::endl;
+    // std::cout << "ROBOT to SE3" << std::endl;
+    // ManifoldsMapping<FrankaRobot> robotTose3;
+    // std::cout << "map" << std::endl;
+    // Eigen::VectorXd x2 = se3.mapFrom(x1, robotTose3);
+    // std::cout << x2.transpose() << std::endl;
+    // std::cout << "jacobian" << std::endl;
+    // Eigen::VectorXd v2 = se3.jacobianFrom(x1, robotTose3) * v1;
+    // std::cout << v2.transpose() << std::endl;
+    // std::cout << "hessian" << std::endl;
+    // std::cout << se3.hessianFrom(x1, v1, robotTose3) << std::endl;
 
-    std::cout << "SE3 to S2" << std::endl;
-    ManifoldsMapping<manifolds::SpecialEuclidean<3>> se3Tos2;
-    std::cout << "map" << std::endl;
-    std::cout << s2.mapFrom(x2, se3Tos2).transpose() << std::endl;
-    std::cout << "jacobian" << std::endl;
-    std::cout << (s2.jacobianFrom(x2, se3Tos2) * v2).transpose() << std::endl;
-    std::cout << "hessian" << std::endl;
-    std::cout << s2.hessianFrom(x2, v2, se3Tos2) << std::endl;
+    // std::cout << "SE3 to S2" << std::endl;
+    // ManifoldsMapping<manifolds::SpecialEuclidean<3>> se3Tos2;
+    // std::cout << "map" << std::endl;
+    // std::cout << s2.mapFrom(x2, se3Tos2).transpose() << std::endl;
+    // std::cout << "jacobian" << std::endl;
+    // std::cout << (s2.jacobianFrom(x2, se3Tos2) * v2).transpose() << std::endl;
+    // std::cout << "hessian" << std::endl;
+    // std::cout << s2.hessianFrom(x2, v2, se3Tos2) << std::endl;
 
-    std::cout << "COMPOSITION" << std::endl;
-    std::cout << "map" << std::endl;
-    std::cout << "jacobian" << std::endl;
-    std::cout << "hessian" << std::endl;
+    // std::cout << "COMPOSITION" << std::endl;
+    // std::cout << "map" << std::endl;
+    // std::cout << "jacobian" << std::endl;
+    // std::cout << "hessian" << std::endl;
 
     // Add tasks to the Bundle Dynamics over S2
     s2.addTasks(
@@ -170,14 +173,14 @@ int main(int argc, char** argv)
     static_cast<tasks::DissipativeEnergy<manifolds::Sphere<2>>&>(s2.task(1)).setDissipativeFactor(10 * Eigen::Matrix3d::Identity());
     static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(s2.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
 
-    // Embedding
-    Eigen::VectorXd potential(num_samples);
-    Eigen::MatrixXd embedding(num_samples, dim + 1);
+    // // Embedding
+    // Eigen::VectorXd potential(num_samples);
+    // Eigen::MatrixXd embedding(num_samples, dim + 1);
 
-    for (size_t i = 0; i < num_samples; i++) {
-        embedding.row(i) = manifolds::Sphere<2>().embedding(X.row(i));
-        potential(i) = s2.task(0).map(embedding.row(i))[0];
-    }
+    // for (size_t i = 0; i < num_samples; i++) {
+    //     embedding.row(i) = manifolds::Sphere<2>().embedding(X.row(i));
+    //     potential(i) = s2.task(0).map(embedding.row(i))[0];
+    // }
 
     // Dynamics
     double time = 0, max_time = 30, dt = 0.001;
@@ -186,27 +189,23 @@ int main(int argc, char** argv)
                     v = manifolds::Sphere<2>().project(x, (manifolds::Sphere<2>().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.01);
     v = manifolds::Sphere<2>().embeddingJacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
 
-    // Record
-    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
-    record.row(0)(0) = time;
-    record.row(0).segment(1, dim + 1) = x;
-    record.row(0).segment(dim + 2, dim + 1) = v;
+    // // Record
+    // Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
+    // record.row(0)(0) = time;
+    // record.row(0).segment(1, dim + 1) = x;
+    // record.row(0).segment(dim + 2, dim + 1) = v;
 
-    // std::cout << "DYNAMICS ACCELERATION S2" << std::endl;
-    // std::cout << s2(x, v).transpose() << std::endl;
-    // // std::cout << s2.update(x, v).solve()._ddx.transpose() << std::endl;
+    std::cout << "DYNAMICS ACCELERATION S2" << std::endl;
+    std::cout << s2(x, v).transpose() << std::endl;
+    std::cout << s2.update(x, v).solve()._ddx.transpose() << std::endl;
 
-    // std::cout << "DYNAMICS ACCELERATION SE3" << std::endl;
-    // Eigen::VectorXd q = Eigen::VectorXd::Random(6),
-    //                 dq = Eigen::VectorXd::Random(6);
-    // std::cout << se3.update(q, dq).solve()._ddx.transpose() << std::endl;
+    std::cout << "DYNAMICS ACCELERATION SE3" << std::endl;
+    Eigen::VectorXd q = Eigen::VectorXd::Random(6),
+                    dq = Eigen::VectorXd::Random(6);
+    std::cout << se3.update(q, dq).solve()._ddx.transpose() << std::endl;
 
     std::cout << "DYNAMICS ACCELERATION ROBOT" << std::endl;
-    {
-        Timer timer;
-        robot.update(x1, v1);
-    }
-    // std::cout << robot.update(x1, v1).solve()._ddx.transpose() << std::endl;
+    std::cout << robot.update(x1, v1).solve()._ddx.transpose() << std::endl;
 
     // std::cout << "TEST" << std::endl;
     // Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},

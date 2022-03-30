@@ -90,26 +90,28 @@ namespace geometric_control {
         template <typename Manifold, typename TreeManifoldsImpl, template <typename> typename Mapping>
         class BundleDynamics : public BundleDynamicsInterface<TreeManifoldsImpl> {
         public:
-            BundleDynamics() : _manifold(), _m(1.0) {}
+            BundleDynamics() : _manifold(), _m(1.0)
+            {
+                _mapping._manifold = &_manifold;
+            }
 
             // Dynamical System
             Eigen::VectorXd operator()(const Eigen::VectorXd& x, const Eigen::VectorXd& v)
             {
-                Eigen::MatrixXd A = Eigen::MatrixXd::Zero(x.rows(), x.rows());
-                Eigen::VectorXd b = Eigen::VectorXd::Zero(x.rows());
+                // Eigen::MatrixXd A = Eigen::MatrixXd::Zero(x.rows(), x.rows());
+                // Eigen::VectorXd b = Eigen::VectorXd::Zero(x.rows());
 
-                Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},
-                                                       c2 = {Eigen::IndexPair<int>(2, 0)};
+                // Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},
+                //                                        c2 = {Eigen::IndexPair<int>(2, 0)};
 
-                for (auto& task : _tasks) {
-                    A += task->jacobian(x).transpose() * task->weight(x, v) * task->jacobian(x);
-                    b -= task->jacobian(x).transpose() * task->weight(x, v)
-                        * (tools::VectorCast(task->hessian(x).contract(tools::TensorCast(v), c2).contract(tools::TensorCast(v), c1))
-                            + tools::VectorCast(task->christoffel(x).contract(tools::TensorCast(task->jacobian(x) * v), c2).contract(tools::TensorCast(task->jacobian(x) * v), c1))
-                            + task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m);
-                }
+                // for (auto& task : _tasks) {
+                //     A += task->jacobian(x).transpose() * task->weight(x, v) * task->jacobian(x);
+                //     b -= task->jacobian(x).transpose() * task->weight(x, v)
+                //         * (tools::VectorCast(task->hessian(x).contract(tools::TensorCast(v), c2).contract(tools::TensorCast(v), c1))
+                //             + tools::VectorCast(task->christoffel(x).contract(tools::TensorCast(task->jacobian(x) * v), c2).contract(tools::TensorCast(task->jacobian(x) * v), c1))
+                //             + task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m);
+                // }
 
-                std::cout << A.selfadjointView<Eigen::Upper>().llt().solve(b).transpose() << std::endl;
                 // return A.selfadjointView<Eigen::Upper>().llt().solve(b);
 
                 Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(x.rows(), x.rows());
@@ -156,18 +158,15 @@ namespace geometric_control {
                 }
 
                 // Update tasks
-                {
-                    Timer timer;
-                    for (auto& task : _tasks) {
-                        // task jacobian and weight
-                        Eigen::MatrixXd J = task->jacobian(x),
-                                        W = task->weight(x, v);
-                        // Update matrices
-                        _A += J.transpose() * W * J;
-                        _H -= J.transpose() * W * task->hessianDir(x, v);
-                        _G -= J.transpose() * W * task->christoffelDir(x, v) * J;
-                        _F -= J.transpose() * W * task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m;
-                    }
+                for (auto& task : _tasks) {
+                    // task jacobian and weight
+                    Eigen::MatrixXd J = task->jacobian(x),
+                                    W = task->weight(x, v);
+                    // Update matrices
+                    _A += J.transpose() * W * J;
+                    _H -= J.transpose() * W * task->hessianDir(x, v);
+                    _G -= J.transpose() * W * task->christoffelDir(x, v) * J;
+                    _F -= J.transpose() * W * task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m;
                 }
 
                 return *this;

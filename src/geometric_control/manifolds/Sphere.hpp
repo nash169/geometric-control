@@ -118,6 +118,26 @@ namespace geometric_control {
                 return pow(c, 3) * p * x * x.transpose();
             }
 
+            Eigen::MatrixXd riemannGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::MatrixXd& grad) const
+            {
+                Eigen::MatrixXd rGrad(grad.rows(), grad.cols());
+
+                for (size_t i = 0; i < grad.rows(); i++)
+                    rGrad.row(i) = project(grad.row(i));
+
+                return rGrad;
+            }
+
+            Eigen::MatrixXd riemannHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& v, const Eigen::MatrixXd& grad, const Eigen::MatrixXd& hess)
+            {
+                Eigen::MatrixXd rHess(hess.rows(), hess.cols());
+
+                for (size_t i = 0; i < hess.rows(); i++)
+                    rHess.row(i) = project(hess.row(i)) - (x.transpose() * grad.row(i)) * v;
+
+                return rHess;
+            }
+
             /*
             |
             |   CHART DEPENDENT GEOMETRY (char geometry  might be enterely implemented through visitor pattern)

@@ -3,6 +3,7 @@
 #include <beautiful_bullet/Simulator.hpp>
 #include <beautiful_bullet/graphics/MagnumGraphics.hpp>
 #include <utils_lib/FileManager.hpp>
+#include <utils_lib/Timer.hpp>
 
 // Bundle DS
 #include <geometric_control/dynamics/BundleDynamics.hpp>
@@ -191,8 +192,21 @@ int main(int argc, char** argv)
     record.row(0).segment(1, dim + 1) = x;
     record.row(0).segment(dim + 2, dim + 1) = v;
 
-    std::cout << "DYNAMICS ACCELERATION" << std::endl;
-    std::cout << s2(x, v).transpose() << std::endl;
+    // std::cout << "DYNAMICS ACCELERATION S2" << std::endl;
+    // std::cout << s2(x, v).transpose() << std::endl;
+    // // std::cout << s2.update(x, v).solve()._ddx.transpose() << std::endl;
+
+    // std::cout << "DYNAMICS ACCELERATION SE3" << std::endl;
+    // Eigen::VectorXd q = Eigen::VectorXd::Random(6),
+    //                 dq = Eigen::VectorXd::Random(6);
+    // std::cout << se3.update(q, dq).solve()._ddx.transpose() << std::endl;
+
+    std::cout << "DYNAMICS ACCELERATION ROBOT" << std::endl;
+    {
+        Timer timer;
+        robot.update(x1, v1);
+    }
+    // std::cout << robot.update(x1, v1).solve()._ddx.transpose() << std::endl;
 
     // std::cout << "TEST" << std::endl;
     // Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},

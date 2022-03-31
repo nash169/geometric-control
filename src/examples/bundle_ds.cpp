@@ -52,22 +52,21 @@ int main(int argc, char** argv)
     // Define base manifold
     using Manifold = manifolds::Sphere<dim>;
 
+    // Attractor
+    Eigen::Vector3d a = Manifold().embedding(Eigen::Vector2d(1.5, 3));
+
     // Create DS on a specific manifold
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
 
     // Assign potential and dissipative task to the DS
-    ds.addTasks(
-        std::make_unique<tasks::PotentialEnergy<Manifold>>(),
-        std::make_unique<tasks::DissipativeEnergy<Manifold>>(),
-        std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
+    ds.addTasks(std::make_unique<tasks::DissipativeEnergy<Manifold>>());
+    static_cast<tasks::DissipativeEnergy<Manifold>&>(ds.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
-    // Attractor
-    Eigen::Vector3d a = Manifold().embedding(Eigen::Vector2d(1.5, 3));
+    ds.addTasks(std::make_unique<tasks::PotentialEnergy<Manifold>>());
+    static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
-    // Set tasks' properties
-    static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(0)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
-    static_cast<tasks::DissipativeEnergy<Manifold>&>(ds.task(1)).setDissipativeFactor(10 * Eigen::Matrix3d::Identity());
-    static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
+    // ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
+    // static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
 
     // Embedding
     Eigen::VectorXd potential(num_samples);
@@ -85,12 +84,22 @@ int main(int argc, char** argv)
                     v = Manifold().project(x, (Manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.01);
     // v = Manifold().jacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
 
-    std::cout << "Initial position" << std::endl;
-    std::cout << x.transpose() << std::endl;
-    std::cout << "Initial velocity" << std::endl;
-    std::cout << v.transpose() << std::endl;
-    std::cout << "Initial acceleration" << std::endl;
-    std::cout << ds(x, v).transpose() << std::endl;
+    // Eigen::MatrixXd temp(6, 3);
+    // temp.row(0) = x;
+    // temp.row(1) = v;
+    // temp.row(2) = ds(x, v);
+
+    // v = v + dt * ds(x, v);
+    // // v = v + dt * Manifold().project(x, ds(x, v));
+    // x = x + dt * v;
+    // // x = Manifold().retract(x, v, dt);
+
+    // temp.row(3) = x;
+    // temp.row(4) = v;
+    // temp.row(5) = ds(x, v);
+
+    // FileManager io_manager;
+    // io_manager.setFile("rsc/temp.csv").write(temp);
 
     // Record
     Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
@@ -103,6 +112,7 @@ int main(int argc, char** argv)
     while (time < max_time && index < num_steps - 1) {
         // Velocity
         v = v + dt * Manifold().project(x, ds(x, v));
+        // v = v + dt * ds(x, v);
         // v = v + dt * Manifold().project(x, ds.update(x, v).solve()._ddx);
 
         // Position

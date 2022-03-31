@@ -65,13 +65,18 @@ namespace geometric_control {
             // Jacobian
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return _M.distGrad(_c, x).transpose();
+                return _M.riemannGrad(x, _M.distGrad(_c, x).transpose()); // return _M.distGrad(_c, x).transpose();
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
                 return tools::TensorCast(_M.distHess(_c, x), 1, x.rows(), x.rows());
+            }
+
+            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
+            {
+                return _M.riemannHess(x, v, _M.distGrad(_c, x).transpose(), (_M.distHess(_c, x) * v).transpose());
             }
 
             // Task manifold metric

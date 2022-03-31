@@ -69,6 +69,20 @@ namespace geometric_control {
     class TreeManifolds : public Visitor<Args...> {
     };
 
+    // Introduce parent manifol template at this level
+
+    // template <typename ParnetManifold, typename... Args>
+    // class TreeManifolds : public Visitor<Args...> {
+    // public:
+    //     TreeManifolds(ParentManifold& manifold) : _manifold(manifold) {}
+    //     ParentManifold& _manifold;
+    // }
+
+    // The create the tree manifold implementation as
+
+    // template<typename ParentManifold>
+    // using TreeManifoldsImpl = TreeManifolds<ParentManifold, Manifold1, Manifold2, ...>;
+
     namespace dynamics {
         // Bundle Dynamics interface
         // Each Bundle Dynamics is an entity define by a manifold with some task attached to it and

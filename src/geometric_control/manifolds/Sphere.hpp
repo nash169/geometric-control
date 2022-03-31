@@ -123,7 +123,7 @@ namespace geometric_control {
                 Eigen::MatrixXd rGrad(grad.rows(), grad.cols());
 
                 for (size_t i = 0; i < grad.rows(); i++)
-                    rGrad.row(i) = project(grad.row(i));
+                    rGrad.row(i) = project(x, grad.row(i));
 
                 return rGrad;
             }
@@ -133,7 +133,7 @@ namespace geometric_control {
                 Eigen::MatrixXd rHess(hess.rows(), hess.cols());
 
                 for (size_t i = 0; i < hess.rows(); i++)
-                    rHess.row(i) = project(hess.row(i)) - (x.transpose() * grad.row(i)) * v;
+                    rHess.row(i) = project(x, hess.row(i)) - (grad.row(i) * x) * v;
 
                 return rHess;
             }

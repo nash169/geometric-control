@@ -52,13 +52,10 @@ namespace geometric_control {
 
             // Jacobian
             // Gradient of the scalar function. It needs to be projected onto the tangent space
-            // Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
-            // {
-            //     return _M.riemannGrad(x, _M.distGrad(_a, x).transpose()); // return _M.distGrad(_a, x).transpose();
-            // }
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return _M.distGrad(_a, x).transpose();
+                // return _M.distGrad(_a, x).transpose();
+                return _M.riemannGrad(x, _M.distGrad(_a, x).transpose());
             }
 
             // Hessian
@@ -67,12 +64,12 @@ namespace geometric_control {
                 return tools::TensorCast(_M.distHess(_a, x), 1, x.rows(), x.rows());
             }
 
-            // Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
-            // {
-            //     // find a way no to calculate multiple times gradient
-            //     // maybe the projection might take place in the bundle DS
-            //     return _M.riemannHess(x, v, _M.distGrad(_a, x).transpose(), (_M.distHess(_a, x) * v).transpose());
-            // }
+            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
+            {
+                // find a way no to calculate multiple times gradient
+                // maybe the projection might take place in the bundle DS
+                return _M.riemannHess(x, v, _M.distGrad(_a, x).transpose(), (_M.distHess(_a, x) * v).transpose());
+            }
 
             // Task manifold metric
             Eigen::MatrixXd metric(const Eigen::VectorXd& x) const override

@@ -65,7 +65,8 @@ namespace geometric_control {
             // Jacobian
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return _M.riemannGrad(x, _M.distGrad(_c, x).transpose()); // return _M.distGrad(_c, x).transpose();
+                // return _M.distGrad(_c, x).transpose();
+                return _M.riemannGrad(x, _M.distGrad(_c, x).transpose());
             }
 
             // Hessian

@@ -112,34 +112,7 @@ namespace geometric_control {
             // Dynamical System
             Eigen::VectorXd operator()(const Eigen::VectorXd& x, const Eigen::VectorXd& v)
             {
-                // Eigen::MatrixXd A = Eigen::MatrixXd::Zero(x.rows(), x.rows());
-                // Eigen::VectorXd b = Eigen::VectorXd::Zero(x.rows());
-
-                // Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},
-                //                                        c2 = {Eigen::IndexPair<int>(2, 0)};
-
-                // for (auto& task : _tasks) {
-                //     A += task->jacobian(x).transpose() * task->weight(x, v) * task->jacobian(x);
-                //     b -= task->jacobian(x).transpose() * task->weight(x, v)
-                //         * (tools::VectorCast(task->hessian(x).contract(tools::TensorCast(v), c2).contract(tools::TensorCast(v), c1))
-                //             + tools::VectorCast(task->christoffel(x).contract(tools::TensorCast(task->jacobian(x) * v), c2).contract(tools::TensorCast(task->jacobian(x) * v), c1))
-                //             + task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m);
-                // }
-
-                // return A.selfadjointView<Eigen::Upper>().llt().solve(b);
-
-                Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(x.rows(), x.rows());
-                Eigen::VectorXd b2 = Eigen::VectorXd::Zero(x.rows());
-
-                for (auto& task : _tasks) {
-                    Eigen::MatrixXd J = task->jacobian(x), w = task->weight(x, v);
-                    A2 += J.transpose() * w * J;
-                    b2 -= J.transpose() * w
-                        * (task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m
-                            + (task->hessianDir(x, v) + task->christoffelDir(x, v) * J) * v);
-                }
-
-                return A2.selfadjointView<Eigen::Upper>().llt().solve(b2);
+                return update(x, v).solve()._ddx;
             }
 
             BundleDynamics& update(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
@@ -194,7 +167,13 @@ namespace geometric_control {
                 return *this;
             }
 
-            // Get Bundle Dynamics
+            // Get manifold (for now not const reference but it should be)
+            Manifold& manifold()
+            {
+                return _manifold;
+            }
+
+            // Get child Bundle Dynamics
             BundleDynamicsInterface<TreeManifoldsImpl>& bundle(const size_t& i) { return *_bundles[i]; }
 
             // Get Task
@@ -271,3 +250,32 @@ namespace geometric_control {
 } // namespace geometric_control
 
 #endif // GEOMETRIC_CONTROL_DYNAMICS_BUNDLE_DYNAMICS_HPP
+
+// Eigen::MatrixXd A = Eigen::MatrixXd::Zero(x.rows(), x.rows());
+// Eigen::VectorXd b = Eigen::VectorXd::Zero(x.rows());
+
+// Eigen::array<Eigen::IndexPair<int>, 1> c1 = {Eigen::IndexPair<int>(1, 0)},
+//                                        c2 = {Eigen::IndexPair<int>(2, 0)};
+
+// for (auto& task : _tasks) {
+//     A += task->jacobian(x).transpose() * task->weight(x, v) * task->jacobian(x);
+//     b -= task->jacobian(x).transpose() * task->weight(x, v)
+//         * (tools::VectorCast(task->hessian(x).contract(tools::TensorCast(v), c2).contract(tools::TensorCast(v), c1))
+//             + tools::VectorCast(task->christoffel(x).contract(tools::TensorCast(task->jacobian(x) * v), c2).contract(tools::TensorCast(task->jacobian(x) * v), c1))
+//             + task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m);
+// }
+
+// return A.selfadjointView<Eigen::Upper>().llt().solve(b);
+
+// Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(x.rows(), x.rows());
+// Eigen::VectorXd b2 = Eigen::VectorXd::Zero(x.rows());
+
+// for (auto& task : _tasks) {
+//     Eigen::MatrixXd J = task->jacobian(x), w = task->weight(x, v);
+//     A2 += J.transpose() * w * J;
+//     b2 -= J.transpose() * w
+//         * (task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m
+//             + (task->hessianDir(x, v) + task->christoffelDir(x, v) * J) * v);
+// }
+
+// return A2.selfadjointView<Eigen::Upper>().llt().solve(b2);

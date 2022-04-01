@@ -49,13 +49,8 @@ int main(int argc, char** argv)
     // Test points
     X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
 
-    // Define base manifold
-    using Manifold = manifolds::Sphere<dim>;
-
-    // Attractor
-    Eigen::Vector3d a = Manifold().embedding(Eigen::Vector2d(1.5, 3));
-
     // Create DS on a specific manifold
+    using Manifold = manifolds::Sphere<dim>;
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
 
     // Assign potential and dissipative task to the DS
@@ -63,43 +58,27 @@ int main(int argc, char** argv)
     static_cast<tasks::DissipativeEnergy<Manifold>&>(ds.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
     ds.addTasks(std::make_unique<tasks::PotentialEnergy<Manifold>>());
+    Eigen::Vector3d a = ds.manifold().embedding(Eigen::Vector2d(1.5, 3));
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
-    // ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
-    // static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
+    ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
+    static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
 
     // Embedding
     Eigen::VectorXd potential(num_samples);
     Eigen::MatrixXd embedding(num_samples, dim + 1);
 
     for (size_t i = 0; i < num_samples; i++) {
-        embedding.row(i) = Manifold().embedding(X.row(i));
+        embedding.row(i) = ds.manifold().embedding(X.row(i));
         potential(i) = ds.task(0).map(embedding.row(i))[0];
     }
 
     // Dynamics
     double time = 0, max_time = 30, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = Manifold().embedding(Eigen::Vector2d(0.7, 5)),
-                    v = Manifold().project(x, (Manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.01);
-    // v = Manifold().jacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
-
-    // Eigen::MatrixXd temp(6, 3);
-    // temp.row(0) = x;
-    // temp.row(1) = v;
-    // temp.row(2) = ds(x, v);
-
-    // v = v + dt * ds(x, v);
-    // // v = v + dt * Manifold().project(x, ds(x, v));
-    // x = x + dt * v;
-    // // x = Manifold().retract(x, v, dt);
-
-    // temp.row(3) = x;
-    // temp.row(4) = v;
-    // temp.row(5) = ds(x, v);
-
-    // FileManager io_manager;
-    // io_manager.setFile("rsc/temp.csv").write(temp);
+    Eigen::Vector3d x = ds.manifold().embedding(Eigen::Vector2d(0.7, 5)),
+                    v = ds.manifold().project(x, (ds.manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.005);
+    // v = ds.manifold().jacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
 
     // Record
     Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
@@ -111,12 +90,19 @@ int main(int argc, char** argv)
 
     while (time < max_time && index < num_steps - 1) {
         // Velocity
-        v = v + dt * Manifold().project(x, ds(x, v));
-        // v = v + dt * ds(x, v);
-        // v = v + dt * Manifold().project(x, ds.update(x, v).solve()._ddx);
+        // No need to project the acceleration because it is already
+        // in the tangent space. Projecting in principle should not alter
+        // the solution but in practice it creates numerical instability
+        // close to the attractor.
+        v = v + dt * ds(x, v);
+        // v = v + dt * Manifold().project(x, ds(x, v));
 
         // Position
-        x = Manifold().retract(x, v, dt);
+        // It also possible to avoid retraction because the acceleration profile
+        // keeps the trajectory close to the manifold. Although without retraction
+        // the trajectory seems to slightly leave the manifold.
+        x = ds.manifold().retract(x, v, dt);
+        // x = x + dt * v;
 
         // Step forward
         time += dt;

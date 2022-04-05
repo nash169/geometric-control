@@ -53,7 +53,8 @@ namespace geometric_control {
             // Optimization weight
             Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
-                return tools::makeMatrix(1);
+                return ((jacobian(x) * v)[0] < 0) ? tools::makeMatrix(1) : tools::makeMatrix(0);
+                // return tools::makeMatrix(1);
             }
 
             // Map between configuration and task manifolds
@@ -93,7 +94,7 @@ namespace geometric_control {
                 double y = map(x)[0];
 
                 Eigen::Tensor<double, 3> gamma(1, 1, 1);
-                gamma(0, 0, 0) = -0.5 * _a / std::pow(y, _b + 1);
+                gamma(0, 0, 0) = -0.5 * _a * std::pow(y, -_b - 1);
 
                 return gamma;
             }

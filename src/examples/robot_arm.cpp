@@ -122,27 +122,30 @@ int main(int argc, char** argv)
 
     // Add tasks to the leaf Bundle Dynamics over S2
     s2.addTasks(
+        std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>(),
         std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>(),
-        std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>());
-    // std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>());
+        // std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>()
+    );
 
     // Set tasks' properties
-    Eigen::Vector3d a = manifolds::Sphere<2>().embedding(Eigen::Vector2d(1.5, 3));
-    static_cast<tasks::PotentialEnergy<manifolds::Sphere<2>>&>(s2.task(0)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
-    static_cast<tasks::DissipativeEnergy<manifolds::Sphere<2>>&>(s2.task(1)).setDissipativeFactor(10 * Eigen::Matrix3d::Identity());
-    // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(s2.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
+    static_cast<tasks::DissipativeEnergy<manifolds::Sphere<2>>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
+
+    Eigen::Vector3d a = s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
+    static_cast<tasks::PotentialEnergy<manifolds::Sphere<2>>&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
+
+    // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 2);
 
     // Record
     double time = 0, max_time = 30, dt = 0.001;
     size_t dim = 7, num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
+    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
     Eigen::VectorXd x(dim),
-        v = Eigen::VectorXd::Random(7);
+        v = Eigen::VectorXd::Random(dim);
     x << 0., 0.7, 0.4, 0.6, 0.3, 0.5, 0.1;
 
     record.row(0)(0) = time;
-    record.row(0).segment(1, dim + 1) = x;
-    record.row(0).segment(dim + 2, dim + 1) = v;
+    record.row(0).segment(1, dim) = x;
+    record.row(0).segment(dim + 1, dim) = v;
 
     // std::cout << "hello" << std::endl;
     // std::cout << robot(x, v) << std::endl;

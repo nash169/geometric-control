@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
     ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
-    static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 1);
+    static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 2);
 
     // Embedding
     Eigen::VectorXd potential(num_samples);

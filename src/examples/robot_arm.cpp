@@ -123,7 +123,7 @@ int main(int argc, char** argv)
     // Add tasks to the leaf Bundle Dynamics over S2
     s2.addTasks(
         std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>(),
-        std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>(),
+        std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>()
         // std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>()
     );
 
@@ -135,40 +135,55 @@ int main(int argc, char** argv)
 
     // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 2);
 
-    // Record
-    double time = 0, max_time = 30, dt = 0.001;
-    size_t dim = 7, num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
-    Eigen::VectorXd x(dim),
-        v = Eigen::VectorXd::Random(dim);
-    x << 0., 0.7, 0.4, 0.6, 0.3, 0.5, 0.1;
+    // Generate random robot configuration with end-effector on S2
+    size_t dim = 7;
+    Eigen::VectorXd x = robot.manifold().inverseKinematics(s2.manifold().embedding(Eigen::Vector2d(0.7, 5)), Eigen::Matrix3d::Identity()),
+                    v = Eigen::VectorXd::Random(dim);
 
-    record.row(0)(0) = time;
-    record.row(0).segment(1, dim) = x;
-    record.row(0).segment(dim + 1, dim) = v;
+    // Simulation
+    const double T = 30, dt = 1e-3;
+    const size_t num_steps = std::ceil(T / dt) + 1;
 
-    // std::cout << "hello" << std::endl;
-    // std::cout << robot(x, v) << std::endl;
+    double t = 0;
+    size_t step = 0;
 
-    while (time < max_time && index < num_steps - 1) {
-        // Velocity
-        v = v + dt * robot(x, v);
+    Simulator simulator;
+    simulator.addGround();
 
-        // Position
-        x = x + dt * v;
+    // For the moment create a duplicate robot (this has to be fixed)
+    bodies::MultiBody iiwa("models/iiwa/urdf/iiwa14.urdf");
+    simulator.add(iiwa.setState(x).activateGravity());
 
-        // Step forward
-        time += dt;
-        index++;
+    simulator.run();
 
-        // Record
-        record.row(index)(0) = time;
-        record.row(index).segment(1, dim + 1) = x;
-        record.row(index).segment(dim + 2, dim + 1) = v;
-    }
+    // // Record
+    // Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
+    // record.row(0)(0) = t;
+    // record.row(0).segment(1, dim) = x;
+    // record.row(0).segment(dim + 1, dim) = v;
 
-    FileManager io_manager;
-    io_manager.setFile("rsc/robot_bundle.csv").write(record);
+    // // std::cout << "hello" << std::endl;
+    // // std::cout << robot(x, v) << std::endl;
+
+    // // while (t < T && step < num_steps - 1) {
+    // //     // Velocity
+    // //     v = v + dt * robot(x, v);
+
+    // //     // Position
+    // //     x = x + dt * v;
+
+    // //     // Step forward
+    // //     t += dt;
+    // //     step++;
+
+    // //     // Record
+    // //     record.row(step)(0) = t;
+    // //     record.row(step).segment(1, dim + 1) = x;
+    // //     record.row(step).segment(dim + 2, dim + 1) = v;
+    // // }
+
+    // FileManager io_manager;
+    // io_manager.setFile("rsc/robot_bundle.csv").write(record);
 
     return 0;
 }

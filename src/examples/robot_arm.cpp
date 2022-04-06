@@ -113,8 +113,13 @@ int main(int argc, char** argv)
 {
     // Create Bundle DS for each manifold
     dynamics::BundleDynamics<FrankaRobot, TreeManifoldsImpl, ManifoldsMapping> robot;
+
     dynamics::BundleDynamics<manifolds::SpecialEuclidean<3>, TreeManifoldsImpl, ManifoldsMapping> se3;
+
     dynamics::BundleDynamics<manifolds::Sphere<2>, TreeManifoldsImpl, ManifoldsMapping> s2;
+    double s2_radius = 0.3;
+    Eigen::Vector3d s2_center(0.7, 0.0, 0.5);
+    s2.manifold().setRadius(s2_radius).setCenter(s2_center);
 
     // Bundle tree structure
     robot.addBundles(&se3);
@@ -148,11 +153,19 @@ int main(int argc, char** argv)
     size_t step = 0;
 
     Simulator simulator;
+    simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
     simulator.addGround();
 
+    // Sphere manifold
+    bodies::SphereParams paramsSphere;
+    paramsSphere.setRadius(s2_radius).setMass(0.1).setFriction(0.5).setColor("grey");
+    bodies::RigidBody sphere("sphere", paramsSphere);
+
     // For the moment create a duplicate robot (this has to be fixed)
-    bodies::MultiBody iiwa("models/iiwa/urdf/iiwa14.urdf");
-    simulator.add(iiwa.setState(x).activateGravity());
+    bodies::MultiBody iiwa("rsc/iiwa/urdf/iiwa14.urdf");
+    simulator.add(
+        sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)).activateGravity(),
+        iiwa.activateGravity());
 
     simulator.run();
 

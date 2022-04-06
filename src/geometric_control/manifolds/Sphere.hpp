@@ -20,32 +20,6 @@ namespace geometric_control {
                     _c.setZero(N + 1);
             }
 
-            // Get radius
-            const double& radius() { return _r; }
-
-            // Get center
-            const Eigen::Matrix<double, N, 1>& center() { return _c; }
-
-            // Set radius
-            Sphere& setRadius(const double& radius)
-            {
-                _r = radius;
-                return *this;
-            }
-
-            // Set center
-            Sphere& setCenter(const Eigen::Matrix<double, N + 1, 1>& center)
-            {
-                _c = center;
-                return *this;
-            }
-
-            /*
-            |
-            |   EMBEDDED GEOMETRY
-            |
-            */
-
             // Manifold dimension
             static constexpr int dim()
             {
@@ -60,6 +34,32 @@ namespace geometric_control {
                 else
                     return N;
             }
+
+            // Get radius
+            const double& radius() { return _r; }
+
+            // Get center
+            const Eigen::Matrix<double, N, 1>& center() { return _c; }
+
+            // Set radius
+            Sphere& setRadius(const double& radius)
+            {
+                _r = radius;
+                return *this;
+            }
+
+            // Set center
+            Sphere& setCenter(const Eigen::Matrix<double, eDim(), 1>& center)
+            {
+                _c = center;
+                return *this;
+            }
+
+            /*
+            |
+            |   EMBEDDED GEOMETRY
+            |
+            */
 
             // Euclidean metric
             virtual Eigen::Matrix<double, eDim(), eDim()> metric(const Eigen::Matrix<double, eDim(), 1>& x) const
@@ -272,7 +272,7 @@ namespace geometric_control {
             double _r;
 
             // Sphere center (embedding space)
-            Eigen::Matrix<double, N + 1, 1> _c;
+            Eigen::Matrix<double, eDim(), 1> _c;
         };
 
         /*

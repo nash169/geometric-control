@@ -18,6 +18,8 @@
 #include <geometric_control/tasks/ObstacleAvoidance.hpp>
 #include <geometric_control/tasks/PotentialEnergy.hpp>
 
+#include <geometric_control/tools/math.hpp>
+
 using namespace geometric_control;
 using namespace beautiful_bullet;
 using namespace utils_lib;
@@ -140,10 +142,21 @@ int main(int argc, char** argv)
 
     // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 2);
 
-    // Generate random robot configuration with end-effector on S2
+    // Generate random on S2
+    Eigen::VectorXd xInit = (s2_radius + 0.05) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center;
+    Eigen::Vector3d dir = -(xInit - s2_center).normalized();
+    Eigen::Matrix3d oTemp = geometric_control::tools::gramSchmidt(dir.transpose());
+    Eigen::Matrix3d oInit;
+    oInit.col(0) = oTemp.col(1);
+    oInit.col(1) = oTemp.col(2);
+    oInit.col(2) = oTemp.col(0);
+    std::cout << dir.transpose() << std::endl;
+    std::cout << oInit << std::endl;
+    // oInit.col(0) = dir;
+
     size_t dim = 7;
-    Eigen::VectorXd x = robot.manifold().inverseKinematics(s2.manifold().embedding(Eigen::Vector2d(0.7, 5)), Eigen::Matrix3d::Identity()),
-                    v = Eigen::VectorXd::Random(dim);
+    Eigen::VectorXd q = robot.manifold().inverseKinematics(xInit, oInit),
+                    qd = Eigen::VectorXd::Random(dim);
 
     // Simulation
     const double T = 30, dt = 1e-3;
@@ -158,14 +171,14 @@ int main(int argc, char** argv)
 
     // Sphere manifold
     bodies::SphereParams paramsSphere;
-    paramsSphere.setRadius(s2_radius).setMass(0.1).setFriction(0.5).setColor("grey");
+    paramsSphere.setRadius(s2_radius).setMass(0.0).setFriction(0.5).setColor("grey");
     bodies::RigidBody sphere("sphere", paramsSphere);
 
     // For the moment create a duplicate robot (this has to be fixed)
     bodies::MultiBody iiwa("rsc/iiwa/urdf/iiwa14.urdf");
     simulator.add(
-        sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)).activateGravity(),
-        iiwa.activateGravity());
+        sphere.setPosition(s2_center(0) + 0.1, s2_center(1), s2_center(2)),
+        iiwa.activateGravity().setState(q));
 
     simulator.run();
 

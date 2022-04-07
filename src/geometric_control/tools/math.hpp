@@ -1,9 +1,8 @@
 #ifndef GEOMETRIC_CONTROL_TOOLS_MATH_HPP
 #define GEOMETRIC_CONTROL_TOOLS_MATH_HPP
 
+#include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
-
-#include "geometric_control/tools/math.hpp"
 
 namespace geometric_control {
     namespace tools {
@@ -18,6 +17,26 @@ namespace geometric_control {
         Eigen::MatrixXd pullback(const Eigen::MatrixXd& g, const Eigen::MatrixXd& df)
         {
             return df.transpose() * g * df;
+        }
+
+        Eigen::MatrixXd gramSchmidt(const Eigen::MatrixXd& V)
+        {
+            size_t n_points = V.rows(), n_features = V.cols();
+
+            Eigen::MatrixXd M(n_points * n_features, n_features);
+
+            for (size_t i = 0; i < n_points; i++) {
+                Eigen::MatrixXd mat(n_features, n_features);
+
+                for (size_t j = 0; j < n_features; j++)
+                    mat.col(j) = V.row(i).transpose();
+
+                Eigen::HouseholderQR<Eigen::MatrixXd> qr(mat);
+
+                M.block(i * n_features, 0, n_features, n_features) = qr.householderQ();
+            }
+
+            return -M;
         }
     } // namespace tools
 } // namespace geometric_control

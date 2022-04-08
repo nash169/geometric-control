@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 #include <utils_lib/FileManager.hpp>
 
 // Bundle DS
@@ -61,8 +62,24 @@ int main(int argc, char** argv)
     Eigen::Vector3d a = ds.manifold().embedding(Eigen::Vector2d(1.5, 3));
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
-    ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
-    static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 2);
+    // Generate random obstacles over the sphere
+    size_t num_obstacles = 100;
+    double radius_obstacles = 0.1;
+    Eigen::MatrixXd center_obstacles(num_obstacles, ds.manifold().eDim());
+
+    std::random_device rd;
+    std::default_random_engine eng(rd());
+    std::uniform_real_distribution<double> distr_x1(0, M_PI), distr_x2(0, 2 * M_PI);
+
+    for (size_t i = 0; i < num_obstacles; i++) {
+        ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
+        Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
+        static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
+            .setRadius(radius_obstacles)
+            .setCenter(oCenter)
+            .setMetricParams(1, 3);
+        center_obstacles.row(i) = ds.manifold().embedding(oCenter);
+    }
 
     // Embedding
     Eigen::VectorXd potential(num_samples);
@@ -74,9 +91,9 @@ int main(int argc, char** argv)
     }
 
     // Dynamics
-    double time = 0, max_time = 30, dt = 0.001;
+    double time = 0, max_time = 60, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = ds.manifold().embedding(Eigen::Vector2d(0.7, 5)),
+    Eigen::Vector3d x = ds.manifold().embedding(Eigen::Vector2d(0.7, 6)),
                     v = ds.manifold().project(x, (ds.manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.005);
     // v = ds.manifold().jacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
 
@@ -116,7 +133,7 @@ int main(int argc, char** argv)
 
     FileManager io_manager;
     io_manager.setFile("rsc/sphere_bundle.csv");
-    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential);
+    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;
 }

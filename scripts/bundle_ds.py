@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
+from math import radians
 from shutil import which
 from termios import VT0
 from turtle import color
@@ -14,11 +15,14 @@ from scipy.sparse.linalg import eigs
 from matplotlib import cm, colors
 from io_utils import get_data
 
-data = get_data(sys.argv[1], "EMBEDDING", "POTENTIAL", "RECORD")
+data = get_data(sys.argv[1], "EMBEDDING", "POTENTIAL",
+                "RECORD", "RADIUS", "CENTER")
 
 embedding = data["EMBEDDING"]
 function = data["POTENTIAL"]
 ds = data["RECORD"]
+radius = data["RADIUS"]
+centers = data["CENTER"]
 res = int(np.sqrt(len(function)))
 
 # EMBEDDING
@@ -51,13 +55,12 @@ ax.quiver(ds[0, 1], ds[0, 2], ds[0, 3], ds[0, 4],
 
 
 # OBSTAClE
-r = 0.3
-c = np.array([0.362358, -0.872814, -0.326944])
-u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
-x = c[0] + r*np.cos(u)*np.sin(v)
-y = c[1] + r*np.sin(u)*np.sin(v)
-z = c[2] + r*np.cos(v)
-ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
+for i in range(centers.shape[0]):
+    u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+    x = centers[i, 0] + radius*np.cos(u)*np.sin(v)
+    y = centers[i, 1] + radius*np.sin(u)*np.sin(v)
+    z = centers[i, 2] + radius*np.cos(v)
+    ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
 
 
 # DYNAMICS

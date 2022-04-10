@@ -7,6 +7,7 @@
 
 // Base manifold
 #include <geometric_control/manifolds/Sphere.hpp>
+#include <geometric_control/manifolds/Euclidean.hpp>
 
 // Tasks
 #include <geometric_control/tasks/DissipativeEnergy.hpp>

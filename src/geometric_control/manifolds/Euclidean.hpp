@@ -8,7 +8,14 @@ namespace geometric_control {
         template <int N, int M = 1>
         class Euclidean : public AbstractManifold<N, M> {
         public:
-            Euclidean() = default;
+            Euclidean()
+            {
+                if constexpr (N != Eigen::Dynamic) {
+                    _c.setZero(N + 1);
+                    _Y.setZero();
+                    _Y.block(0, 0, N, N) = Eigen::MatrixXd::Identity(N, N);
+                }
+            }
 
             // Manifold dimension
             static constexpr int dim()
@@ -81,7 +88,7 @@ namespace geometric_control {
             // Retraction
             Eigen::Matrix<double, eDim(), 1> retract(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& u, const double& t = 1) const
             {
-                return project(x + t * u) + _c;
+                return project(x, x + t * u) + _c;
             }
 
             // Distance in the Euclidean embedding
@@ -90,28 +97,58 @@ namespace geometric_control {
                 return (x - y).norm();
             }
 
+            // Distance gradient in the Euclidean embedding (here differential components and the gradient coincides due to the linearity of the space)
+            Eigen::Matrix<double, eDim(), 1> distGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
+            {
+                return (y - x) / (x - y).norm();
+            }
+
+            // Distance hessian in the Euclidean space (same as for the gradient)
+            Eigen::Matrix<double, eDim(), eDim()> distHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
+            {
+                Eigen::Matrix<double, eDim(), 1> d = x - y;
+
+                return (Eigen::MatrixXd::Identity(eDim(), eDim()) - d * d.transpose() / d.squaredNorm()) / d.norm();
+            }
+
+            Eigen::MatrixXd riemannGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::MatrixXd& grad) const
+            {
+                Eigen::MatrixXd rGrad(grad.rows(), grad.cols());
+
+                for (size_t i = 0; i < grad.rows(); i++)
+                    rGrad.row(i) = project(x, grad.row(i));
+
+                return rGrad;
+            }
+
+            Eigen::MatrixXd riemannHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& v, const Eigen::MatrixXd& grad, const Eigen::MatrixXd& hess)
+            {
+                Eigen::MatrixXd rHess(hess.rows(), hess.cols());
+
+                for (size_t i = 0; i < hess.rows(); i++)
+                    rHess.row(i) = project(x, hess.row(i));
+
+                return rHess;
+            }
+
+            /*
+            |
+            |   CHART DEPENDENT GEOMETRY (char geometry might be enterely implemented through visitor pattern)
+            |
+            */
+
+            // Embedding
+            Eigen::Matrix<double, eDim(), 1> embedding(const Eigen::Matrix<double, dim(), 1>& x) const
+            {
+                return _Y * x + _c;
+            }
+
         protected:
             // Stiefel manifold subspace representation
             Eigen::Matrix<double, eDim(), dim()> _Y;
 
             // Subspace center
             Eigen::Matrix<double, eDim(), 1> _c;
-
-            // // Distance gradient in the Euclidean embedding (here differential components and the gradient coincides due to the linearity of the space)
-            // Eigen::Matrix<double, eDim(), 1> distGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
-            // {
-            //     double p = x.transpose() * y;
-
-            //     return -1 / sqrt(1 - p * p) * x;
-            // }
-
-            // // Distance hessian in the Euclidean space (same as for the gradient)
-            // Eigen::Matrix<double, eDim(), eDim()> distHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
-            // {
-            //     double p = x.transpose() * y, c = -1 / sqrt(1 - p * p);
-
-            //     return pow(c, 3) * p * x * x.transpose();
-            // }
         };
     } // namespace manifolds
 } // namespace geometric_control

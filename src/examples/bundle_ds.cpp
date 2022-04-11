@@ -6,8 +6,8 @@
 #include <geometric_control/dynamics/BundleDynamics.hpp>
 
 // Base manifold
-#include <geometric_control/manifolds/Sphere.hpp>
 #include <geometric_control/manifolds/Euclidean.hpp>
+#include <geometric_control/manifolds/Sphere.hpp>
 
 // Tasks
 #include <geometric_control/tasks/DissipativeEnergy.hpp>
@@ -17,15 +17,19 @@
 using namespace geometric_control;
 using namespace utils_lib;
 
+// Define base manifold
+// using Manifold = manifolds::Sphere<2>;
+using Manifold = manifolds::Euclidean<2>;
+
 // Define the nodes in the tree dynamics
-using TreeManifoldsImpl = TreeManifolds<manifolds::Sphere<2>>;
+using TreeManifoldsImpl = TreeManifolds<Manifold>;
 
 // Tree Mapping
 template <typename ParentManifold>
 class ManifoldsMapping : public TreeManifoldsImpl {
-    Eigen::VectorXd map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
-    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
-    Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
+    Eigen::VectorXd map(const Eigen::VectorXd& x, Manifold& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
+    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, Manifold& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
+    Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, Manifold& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 
 public:
     ParentManifold* _manifold;
@@ -33,7 +37,7 @@ public:
 
 // Parent Manifold map specialization
 template <>
-Eigen::VectorXd ManifoldsMapping<manifolds::Sphere<2>>::map(const Eigen::VectorXd& x, manifolds::Sphere<2>& manifold)
+Eigen::VectorXd ManifoldsMapping<Manifold>::map(const Eigen::VectorXd& x, Manifold& manifold)
 {
     return Eigen::VectorXd::Ones(x.size());
 }
@@ -52,7 +56,6 @@ int main(int argc, char** argv)
     X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
 
     // Create DS on a specific manifold
-    using Manifold = manifolds::Sphere<dim>;
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
 
     // Assign potential and dissipative task to the DS
@@ -64,7 +67,7 @@ int main(int argc, char** argv)
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
     // Generate random obstacles over the sphere
-    size_t num_obstacles = 100;
+    size_t num_obstacles = 50;
     double radius_obstacles = 0.1;
     Eigen::MatrixXd center_obstacles(num_obstacles, ds.manifold().eDim());
 
@@ -119,8 +122,8 @@ int main(int argc, char** argv)
         // It also possible to avoid retraction because the acceleration profile
         // keeps the trajectory close to the manifold. Although without retraction
         // the trajectory seems to slightly leave the manifold.
-        x = ds.manifold().retract(x, v, dt);
-        // x = x + dt * v;
+        // x = ds.manifold().retract(x, v, dt);
+        x = x + dt * v;
 
         // Step forward
         time += dt;
@@ -133,8 +136,8 @@ int main(int argc, char** argv)
     }
 
     FileManager io_manager;
-    io_manager.setFile("rsc/sphere_bundle.csv");
-    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
+    io_manager.setFile("rsc/linear_bundle.csv");
+    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;
 }

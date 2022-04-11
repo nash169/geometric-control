@@ -140,7 +140,7 @@ namespace geometric_control {
 
             /*
             |
-            |   CHART DEPENDENT GEOMETRY (char geometry  might be enterely implemented through visitor pattern)
+            |   CHART DEPENDENT GEOMETRY (char geometry might be enterely implemented through visitor pattern)
             |
             */
 

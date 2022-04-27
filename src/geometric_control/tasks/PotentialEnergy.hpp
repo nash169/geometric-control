@@ -66,7 +66,7 @@ namespace geometric_control {
 
             Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
             {
-                // find a way no to calculate multiple times gradient
+                // find a way not to calculate multiple times gradient
                 // maybe the projection might take place in the bundle DS
                 return _M.riemannHess(x, v, _M.distGrad(_a, x).transpose(), (_M.distHess(_a, x) * v).transpose());
             }

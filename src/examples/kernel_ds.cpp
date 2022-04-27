@@ -165,11 +165,9 @@ int main(int argc, char** argv)
     record.row(0).segment(1, dim + 1) = x;
     record.row(0).segment(dim + 2, dim + 1) = v;
 
-    Eigen::MatrixXd P = Eigen::MatrixXd::Random(10000, 2), Q = Eigen::MatrixXd::Random(10000, 2);
-    Kernel_t k;
     {
         Timer timer;
-        k.gram(P, Q);
+        ds(x, v);
     }
 
     // while (time < max_time && index < num_steps - 1) {

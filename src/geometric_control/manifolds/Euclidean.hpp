@@ -121,7 +121,7 @@ namespace geometric_control {
                 return rGrad;
             }
 
-            Eigen::MatrixXd riemannHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& v, const Eigen::MatrixXd& grad, const Eigen::MatrixXd& hess)
+            Eigen::MatrixXd riemannHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& v, const Eigen::MatrixXd& grad, const Eigen::MatrixXd& hess) const
             {
                 Eigen::MatrixXd rHess(hess.rows(), hess.cols());
 

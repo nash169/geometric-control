@@ -30,7 +30,7 @@ namespace geometric_control {
             // Perturbed hessian (m,n: space dimensions -> n x m)
             // This is the standard implementation using tensor contraction (not very efficient).
             // Override this we analytical formulation
-            virtual Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v)
+            virtual Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const
             {
                 Eigen::array<Eigen::IndexPair<int>, 1> c = {Eigen::IndexPair<int>(2, 0)};
                 return tools::MatrixCast(hessian(x).contract(tools::TensorCast(v), c), dim(), _M.eDim());
@@ -38,6 +38,10 @@ namespace geometric_control {
 
             // Task manifold metric
             virtual Eigen::MatrixXd metric(const Eigen::VectorXd&) const = 0;
+            virtual Eigen::MatrixXd metricInv(const Eigen::VectorXd& x) const
+            {
+                return metric(x).inverse();
+            }
 
             // Connection functions (n: space dimension -> n x n x n)
             virtual Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd&) const = 0;
@@ -45,7 +49,7 @@ namespace geometric_control {
             // Perturbed connection functions ((n: space dimension -> n x n x n))
             // This is the standard implementation using tensor contraction (not very efficient).
             // Override this we analytical formulation
-            virtual Eigen::MatrixXd christoffelDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v)
+            virtual Eigen::MatrixXd christoffelDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const
             {
                 Eigen::array<Eigen::IndexPair<int>, 1> c = {Eigen::IndexPair<int>(2, 0)};
                 return tools::MatrixCast(christoffel(x).contract(tools::TensorCast(jacobian(x) * v), c), dim(), dim());

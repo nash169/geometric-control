@@ -153,7 +153,7 @@ namespace geometric_control {
                     _A += J.transpose() * W * J;
                     _H -= J.transpose() * W * task->hessianDir(x, v);
                     _G -= J.transpose() * W * task->christoffelDir(x, v) * J;
-                    _F -= J.transpose() * W * task->metric(x).inverse() * (task->energyGrad(x) + task->field(x, v)) / _m;
+                    _F -= J.transpose() * W * task->metricInv(x) * (task->energyGrad(x) + task->field(x, v));
                 }
 
                 return *this;
@@ -162,7 +162,7 @@ namespace geometric_control {
             BundleDynamics& solve() override
             {
                 // store acceleration of the DS
-                _ddx = Eigen::MatrixXd(_A).selfadjointView<Eigen::Upper>().llt().solve(_F + (_H + _G) * _dx);
+                _ddx = Eigen::MatrixXd(_A).selfadjointView<Eigen::Upper>().llt().solve(_F / _m + (_H + _G) * _dx);
 
                 return *this;
             }

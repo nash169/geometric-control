@@ -67,7 +67,7 @@ namespace geometric_control {
                 return tools::TensorCast(-_kernel.hess(x, _a), 1, x.rows(), x.rows());
             }
 
-            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
+            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
                 // find a way not to calculate multiple times gradient
                 // maybe the projection might take place in the bundle DS

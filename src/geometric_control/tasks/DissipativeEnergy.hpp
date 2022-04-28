@@ -52,8 +52,18 @@ namespace geometric_control {
                 return hess;
             }
 
+            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+            {
+                return Eigen::MatrixXd::Zero(x.rows(), x.rows());
+            }
+
             // Task manifold metric
             Eigen::MatrixXd metric(const Eigen::VectorXd& x) const override
+            {
+                return Eigen::MatrixXd::Identity(x.rows(), x.rows());
+            }
+
+            Eigen::MatrixXd metricInv(const Eigen::VectorXd& x) const override
             {
                 return Eigen::MatrixXd::Identity(x.rows(), x.rows());
             }
@@ -64,6 +74,11 @@ namespace geometric_control {
                 Eigen::Tensor<double, 3> gamma(x.rows(), x.rows(), x.rows());
                 gamma.setZero();
                 return gamma;
+            }
+
+            Eigen::MatrixXd christoffelDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+            {
+                return Eigen::MatrixXd::Identity(x.rows(), x.rows());
             }
 
             // Energy scalar field -> (0,0) tensor field
@@ -81,7 +96,7 @@ namespace geometric_control {
             // (Co-vector) field -> (0,1) tensor field
             Eigen::VectorXd field(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
-                return _D * (jacobian(x) * v);
+                return _D * v; //_D * (jacobian(x) * v);
             }
 
         protected:

@@ -18,8 +18,8 @@ using namespace geometric_control;
 using namespace utils_lib;
 
 // Define base manifold
-// using Manifold = manifolds::Sphere<2>;
-using Manifold = manifolds::Euclidean<2>;
+using Manifold = manifolds::Sphere<2>;
+// using Manifold = manifolds::Euclidean<2>;
 
 // Define the nodes in the tree dynamics
 using TreeManifoldsImpl = TreeManifolds<Manifold>;
@@ -62,28 +62,28 @@ int main(int argc, char** argv)
     ds.addTasks(std::make_unique<tasks::DissipativeEnergy<Manifold>>());
     static_cast<tasks::DissipativeEnergy<Manifold>&>(ds.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
-    ds.addTasks(std::make_unique<tasks::PotentialEnergy<Manifold>>());
-    Eigen::Vector3d a = ds.manifold().embedding(Eigen::Vector2d(1.5, 3));
-    static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
+    // ds.addTasks(std::make_unique<tasks::PotentialEnergy<Manifold>>());
+    // Eigen::Vector3d a = ds.manifold().embedding(Eigen::Vector2d(1.5, 3));
+    // static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
-    // Generate random obstacles over the sphere
-    size_t num_obstacles = 50;
-    double radius_obstacles = 0.1;
-    Eigen::MatrixXd center_obstacles(num_obstacles, ds.manifold().eDim());
+    // // Generate random obstacles over the sphere
+    // size_t num_obstacles = 50;
+    // double radius_obstacles = 0.1;
+    // Eigen::MatrixXd center_obstacles(num_obstacles, ds.manifold().eDim());
 
-    std::random_device rd;
-    std::default_random_engine eng(rd());
-    std::uniform_real_distribution<double> distr_x1(0, M_PI), distr_x2(0, 2 * M_PI);
+    // std::random_device rd;
+    // std::default_random_engine eng(rd());
+    // std::uniform_real_distribution<double> distr_x1(0, M_PI), distr_x2(0, 2 * M_PI);
 
-    for (size_t i = 0; i < num_obstacles; i++) {
-        ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
-        Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
-        static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
-            .setRadius(radius_obstacles)
-            .setCenter(oCenter)
-            .setMetricParams(1, 3);
-        center_obstacles.row(i) = ds.manifold().embedding(oCenter);
-    }
+    // for (size_t i = 0; i < num_obstacles; i++) {
+    //     ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
+    //     Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
+    //     static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
+    //         .setRadius(radius_obstacles)
+    //         .setCenter(oCenter)
+    //         .setMetricParams(1, 3);
+    //     center_obstacles.row(i) = ds.manifold().embedding(oCenter);
+    // }
 
     // Embedding
     Eigen::VectorXd potential(num_samples);
@@ -109,35 +109,40 @@ int main(int argc, char** argv)
 
     // std::cout << Manifold().embedding(Eigen::Vector2d(1.2, 3.5)).transpose() << std::endl;
 
-    while (time < max_time && index < num_steps - 1) {
-        // Velocity
-        // No need to project the acceleration because it is already
-        // in the tangent space. Projecting in principle should not alter
-        // the solution but in practice it creates numerical instability
-        // close to the attractor.
-        v = v + dt * ds(x, v);
-        // v = v + dt * Manifold().project(x, ds(x, v));
-
-        // Position
-        // It also possible to avoid retraction because the acceleration profile
-        // keeps the trajectory close to the manifold. Although without retraction
-        // the trajectory seems to slightly leave the manifold.
-        // x = ds.manifold().retract(x, v, dt);
-        x = x + dt * v;
-
-        // Step forward
-        time += dt;
-        index++;
-
-        // Record
-        record.row(index)(0) = time;
-        record.row(index).segment(1, dim + 1) = x;
-        record.row(index).segment(dim + 2, dim + 1) = v;
+    {
+        Timer timer;
+        ds(x, v);
     }
 
-    FileManager io_manager;
-    io_manager.setFile("rsc/linear_bundle.csv");
-    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
+    // while (time < max_time && index < num_steps - 1) {
+    //     // Velocity
+    //     // No need to project the acceleration because it is already
+    //     // in the tangent space. Projecting in principle should not alter
+    //     // the solution but in practice it creates numerical instability
+    //     // close to the attractor.
+    //     v = v + dt * ds(x, v);
+    //     // v = v + dt * Manifold().project(x, ds(x, v));
+
+    //     // Position
+    //     // It also possible to avoid retraction because the acceleration profile
+    //     // keeps the trajectory close to the manifold. Although without retraction
+    //     // the trajectory seems to slightly leave the manifold.
+    //     // x = ds.manifold().retract(x, v, dt);
+    //     x = x + dt * v;
+
+    //     // Step forward
+    //     time += dt;
+    //     index++;
+
+    //     // Record
+    //     record.row(index)(0) = time;
+    //     record.row(index).segment(1, dim + 1) = x;
+    //     record.row(index).segment(dim + 2, dim + 1) = v;
+    // }
+
+    // FileManager io_manager;
+    // io_manager.setFile("rsc/linear_bundle.csv");
+    // io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;
 }

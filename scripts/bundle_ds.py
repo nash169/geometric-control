@@ -18,40 +18,40 @@ from io_utils import get_data
 data = get_data(sys.argv[1], "EMBEDDING", "POTENTIAL",
                 "RECORD", "RADIUS", "CENTER", "TARGET")
 
-embedding = data["EMBEDDING"]
-function = data["POTENTIAL"]
+res = int(np.sqrt(len(data["POTENTIAL"])))
+Xe = data["EMBEDDING"][:, 0].reshape((res, res), order='F')
+Ye = data["EMBEDDING"][:, 1].reshape((res, res), order='F')
+Ze = data["EMBEDDING"][:, 2].reshape((res, res), order='F')
+Fp = data["POTENTIAL"].reshape((res, res), order='F')
+Fp -= np.min(Fp)
+Fp /= np.max(Fp)
+
 ds = data["RECORD"]
 target = data["TARGET"]
 radius = data["RADIUS"]
 centers = data["CENTER"]
-res = int(np.sqrt(len(function)))
 
 # PLOT EMBEDDING
-fig = plt.figure()
-ax = fig.add_subplot(111, projection="3d")
-
-surf = ax.plot_surface(
-    embedding[:, 0].reshape((res, res), order='F'),
-    embedding[:, 1].reshape((res, res), order='F'),
-    embedding[:, 2].reshape((res, res), order='F'),
-    facecolors=cm.jet(function.reshape(
-        (res, res), order='F')/np.amax(function)),
-    antialiased=False, linewidth=0, alpha=0.25
-)
-fig.colorbar(surf, ax=ax)
+fig_1 = plt.figure()
+ax = fig_1.add_subplot(111, projection="3d")
+surf = ax.plot_surface(Xe, Ye, Ze, facecolors=cm.jet(
+    Fp), antialiased=True, linewidth=0, alpha=0.7)
+fig_1.colorbar(surf, ax=ax)
+# ax.set_box_aspect((np.ptp(Xe), np.ptp(Ye), np.ptp(Ze)))
 
 # PLOT OBSTACLES
+obstacles = data["EMBEDDING"]
 for i in range(centers.shape[0]):
     u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
     x = centers[i, 0] + radius*np.cos(u)*np.sin(v)
     y = centers[i, 1] + radius*np.sin(u)*np.sin(v)
     z = centers[i, 2] + radius*np.cos(v)
     ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
-    embedding = np.append(
-        embedding, np.concatenate((x.flatten()[:, np.newaxis], y.flatten()[:, np.newaxis], z.flatten()[:, np.newaxis]), axis=1), axis=0)
+    obstacles = np.append(
+        obstacles, np.concatenate((x.flatten()[:, np.newaxis], y.flatten()[:, np.newaxis], z.flatten()[:, np.newaxis]), axis=1), axis=0)
 
-ax.set_box_aspect((np.ptp(embedding[:, 0]), np.ptp(
-    embedding[:, 1]), np.ptp(embedding[:, 2])))
+ax.set_box_aspect((np.ptp(obstacles[:, 0]), np.ptp(
+    obstacles[:, 1]), np.ptp(obstacles[:, 2])))
 
 # PLOT TRAJECTORY
 ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black")
@@ -63,7 +63,7 @@ ax.scatter(ds[0, 1], ds[0, 2], ds[0, 3], color="black")
 ax.scatter(ds[-1, 1], ds[-1, 2], ds[-1, 3], color="blue")
 # init vel
 ax.quiver(ds[0, 1], ds[0, 2], ds[0, 3], ds[0, 4],
-          ds[0, 5], ds[0, 6], length=100, color='k')
+          ds[0, 5], ds[0, 6], length=50, color='k')
 
 
 # DYNAMICS

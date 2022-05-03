@@ -50,7 +50,7 @@ namespace geometric_control {
             // this map is actually a multi scalar valued function on the manifold
             Eigen::VectorXd map(const Eigen::VectorXd& x) const override
             {
-                return tools::makeVector(-_kernel(x, _a));
+                return tools::makeVector(_kernel(x, _a));
             }
 
             // Jacobian
@@ -58,20 +58,20 @@ namespace geometric_control {
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
                 // return _M.distGrad(_a, x).transpose();
-                return _M.riemannGrad(x, -_kernel.grad(x, _a).transpose());
+                return _M.riemannGrad(x, _kernel.grad(x, _a).transpose());
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                return tools::TensorCast(-_kernel.hess(x, _a), 1, x.rows(), x.rows());
+                return tools::TensorCast(_kernel.hess(x, _a), 1, x.rows(), x.rows());
             }
 
             Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
                 // find a way not to calculate multiple times gradient
                 // maybe the projection might take place in the bundle DS
-                return _M.riemannHess(x, v, _M.distGrad(_a, x).transpose(), (-_kernel.hess(x, _a) * v).transpose());
+                return _M.riemannHess(x, v, _M.distGrad(_a, x).transpose(), (_kernel.hess(x, _a) * v).transpose());
             }
 
             // Task manifold metric
@@ -91,14 +91,13 @@ namespace geometric_control {
             // Energy scalar field -> (0,0) tensor field
             double energy(const Eigen::VectorXd& x) const override
             {
-                double y = map(x)[0];
-                return 0.5 * y * y;
+                return -map(x)[0];
             }
 
             // Energy gradient field -> (1,0) tensor field when sharped
             Eigen::VectorXd energyGrad(const Eigen::VectorXd& x) const override
             {
-                return map(x);
+                return tools::makeVector(-1);
             }
 
             // (Co-vector) field -> (0,1) tensor field

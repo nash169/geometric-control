@@ -76,7 +76,7 @@ namespace geometric_control {
                 return tools::TensorCast(_M.distHess(_c, x), 1, x.rows(), x.rows());
             }
 
-            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) override
+            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
                 return _M.riemannHess(x, v, _M.distGrad(_c, x).transpose(), (_M.distHess(_c, x) * v).transpose());
             }

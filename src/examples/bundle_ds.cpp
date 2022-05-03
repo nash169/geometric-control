@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 
     for (size_t i = 0; i < num_samples; i++) {
         embedding.row(i) = ds.manifold().embedding(X.row(i));
-        potential(i) = ds.task(0).map(embedding.row(i))[0];
+        potential(i) = ds.task(1).map(embedding.row(i))[0];
     }
 
     // Dynamics

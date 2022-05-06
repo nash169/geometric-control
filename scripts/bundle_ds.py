@@ -35,7 +35,7 @@ centers = data["CENTER"]
 fig_1 = plt.figure()
 ax = fig_1.add_subplot(111, projection="3d")
 surf = ax.plot_surface(Xe, Ye, Ze, facecolors=cm.jet(
-    Fp), antialiased=True, linewidth=0, alpha=0.7)
+    Fp), antialiased=True, linewidth=0, alpha=0.25)
 fig_1.colorbar(surf, ax=ax)
 # ax.set_box_aspect((np.ptp(Xe), np.ptp(Ye), np.ptp(Ze)))
 

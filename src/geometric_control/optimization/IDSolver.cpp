@@ -2,7 +2,7 @@
 
 namespace geometric_control {
     namespace optimization {
-        IdSolver::IdSolver(unsigned int nb_joints, unsigned int task_dim, bool use_slack) : nb_joints_(nb_joints), task_dim_(task_dim)
+        IDSolver::IDSolver(unsigned int nb_joints, unsigned int task_dim, bool use_slack) : nb_joints_(nb_joints), task_dim_(task_dim)
         {
 
             q_min_.resize(nb_joints_);
@@ -37,54 +37,54 @@ namespace geometric_control {
             J_prev_.setZero();
         }
 
-        IdSolver::~IdSolver()
+        IDSolver::~IDSolver()
         {
         }
 
-        void IdSolver::setJointPositionLimits(const Eigen::VectorXd& q_min,
+        void IDSolver::setJointPositionLimits(const Eigen::VectorXd& q_min,
             const Eigen::VectorXd& q_max)
         {
             q_min_ = q_min;
             q_max_ = q_max;
         }
 
-        void IdSolver::setJointVelocityLimits(const Eigen::VectorXd& dq_max)
+        void IDSolver::setJointVelocityLimits(const Eigen::VectorXd& dq_max)
         {
             setJointVelocityLimits(-dq_max, dq_max);
         }
 
-        void IdSolver::setJointVelocityLimits(const Eigen::VectorXd& dq_min,
+        void IDSolver::setJointVelocityLimits(const Eigen::VectorXd& dq_min,
             const Eigen::VectorXd& dq_max)
         {
             dq_min_ = dq_min;
             dq_max_ = dq_max;
         }
 
-        void IdSolver::setJointAccelerationLimits(const Eigen::VectorXd& ddq_max)
+        void IDSolver::setJointAccelerationLimits(const Eigen::VectorXd& ddq_max)
         {
             setJointAccelerationLimits(-ddq_max, ddq_max);
         }
 
-        void IdSolver::setJointAccelerationLimits(const Eigen::VectorXd& ddq_min,
+        void IDSolver::setJointAccelerationLimits(const Eigen::VectorXd& ddq_min,
             const Eigen::VectorXd& ddq_max)
         {
             ddq_min_ = ddq_min;
             ddq_max_ = ddq_max;
         }
 
-        void IdSolver::setJointTorqueLimits(const Eigen::VectorXd& tau_max)
+        void IDSolver::setJointTorqueLimits(const Eigen::VectorXd& tau_max)
         {
             setJointTorqueLimits(-tau_max, tau_max);
         }
 
-        void IdSolver::setJointTorqueLimits(const Eigen::VectorXd& tau_min,
+        void IDSolver::setJointTorqueLimits(const Eigen::VectorXd& tau_min,
             const Eigen::VectorXd& tau_max)
         {
             tau_min_ = tau_min;
             tau_max_ = tau_max;
         }
 
-        bool IdSolver::step(Eigen::VectorXd& tau, const Eigen::VectorXd& q,
+        bool IDSolver::step(Eigen::VectorXd& tau, const Eigen::VectorXd& q,
             const Eigen::VectorXd& dq,
             const Eigen::VectorXd& error,
             const Eigen::MatrixXd& J,

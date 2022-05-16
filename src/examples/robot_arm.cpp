@@ -5,6 +5,9 @@
 #include <utils_lib/FileManager.hpp>
 #include <utils_lib/Timer.hpp>
 
+// QP
+#include <qpOASES.hpp>
+
 // Bundle DS
 #include <geometric_control/dynamics/BundleDynamics.hpp>
 

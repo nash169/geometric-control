@@ -26,7 +26,7 @@ def options(opt):
     opt.load("compiler_cxx")
 
     # Load tools options
-    opt.load("flags eigen", tooldir="waf_tools")
+    opt.load("flags eigen qpoases", tooldir="waf_tools")
 
     # Load personal tools options
     for key in tools:
@@ -54,7 +54,7 @@ def configure(cfg):
     cfg.get_env()["requires"] += ["EIGEN", "KERNELLIB"]
 
     # Load tools configuration
-    cfg.load("flags eigen", tooldir="waf_tools")
+    cfg.load("flags eigen qpoases", tooldir="waf_tools")
 
     # Load personal tools configurations
     for key in tools:

@@ -167,6 +167,12 @@ namespace geometric_control {
                 return *this;
             }
 
+            // Get acceleration
+            const Eigen::VectorXd& acceleration()
+            {
+                return _ddx;
+            }
+
             // Get manifold (for now not const reference but it should be)
             Manifold& manifold()
             {
@@ -221,6 +227,8 @@ namespace geometric_control {
                 return node.hessian(x, v, _manifold);
             }
 
+        protected:
+            // Lift variables
             using BundleDynamicsInterface<TreeManifoldsImpl>::_A;
             using BundleDynamicsInterface<TreeManifoldsImpl>::_H;
             using BundleDynamicsInterface<TreeManifoldsImpl>::_G;
@@ -230,7 +238,6 @@ namespace geometric_control {
             using BundleDynamicsInterface<TreeManifoldsImpl>::_dx;
             using BundleDynamicsInterface<TreeManifoldsImpl>::_ddx;
 
-        protected:
             // Mass
             double _m;
 

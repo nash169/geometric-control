@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 
     size_t dim = 7;
     Eigen::VectorXd q = robot.manifold().inverseKinematics(xInit, oInit),
-                    qd = Eigen::VectorXd::Random(dim);
+                    dq = Eigen::VectorXd::Random(dim);
 
     // Simulation
     const double T = 30, dt = 1e-3;
@@ -183,36 +183,41 @@ int main(int argc, char** argv)
         sphere.setPosition(s2_center(0) + 0.1, s2_center(1), s2_center(2)),
         iiwa.activateGravity().setState(q));
 
-    simulator.run();
+    simulator.initGraphics();
+    // simulator.run();
 
-    // // Record
-    // Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
-    // record.row(0)(0) = t;
-    // record.row(0).segment(1, dim) = x;
-    // record.row(0).segment(dim + 1, dim) = v;
+    // Record
+    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
+    record.row(0)(0) = t;
+    record.row(0).segment(1, dim) = q;
+    record.row(0).segment(dim + 1, dim) = dq;
 
-    // // std::cout << "hello" << std::endl;
-    // // std::cout << robot(x, v) << std::endl;
+    {
+        Timer timer;
+        std::cout << robot(q, dq).transpose() << std::endl;
+    }
 
-    // // while (t < T && step < num_steps - 1) {
-    // //     // Velocity
-    // //     v = v + dt * robot(x, v);
+    while (t < T && step < num_steps - 1) {
+        // Velocity
+        dq = dq + dt * robot(q, dq);
 
-    // //     // Position
-    // //     x = x + dt * v;
+        // Position
+        q = q + dt * dq;
 
-    // //     // Step forward
-    // //     t += dt;
-    // //     step++;
+        // Step forward
+        simulator.agents()[0].setState(q);
+        simulator.step(t);
+        t += dt;
+        step++;
 
-    // //     // Record
-    // //     record.row(step)(0) = t;
-    // //     record.row(step).segment(1, dim + 1) = x;
-    // //     record.row(step).segment(dim + 2, dim + 1) = v;
-    // // }
+        // Record
+        record.row(step)(0) = t;
+        record.row(step).segment(1, dim) = q;
+        record.row(step).tail(dim) = dq;
+    }
 
-    // FileManager io_manager;
-    // io_manager.setFile("rsc/robot_bundle.csv").write(record);
+    FileManager io_manager;
+    io_manager.setFile("outputs/robot_bundle.csv").write(record);
 
     return 0;
 }

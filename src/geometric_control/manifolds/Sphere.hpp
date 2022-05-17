@@ -91,7 +91,7 @@ namespace geometric_control {
             // Retraction
             Eigen::Matrix<double, eDim(), 1> retract(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& u, const double& t = 1) const
             {
-                return (x + t * u) / (x + t * u).norm();
+                return _r * (x - _c + t * u) / (x - _c + t * u).norm() + _c;
             }
 
             // Distance in the Euclidean embedding
@@ -99,7 +99,7 @@ namespace geometric_control {
             {
                 std::complex<double> d = (x - y).norm();
 
-                return 2 * asin(0.5 * d).real();
+                return 2 * asin(0.5 * d).real() * _r;
             }
 
             // Distance gradient in the Euclidean embedding (here differential components and the gradient coincides due to the linearity of the space)
@@ -107,7 +107,7 @@ namespace geometric_control {
             {
                 double p = x.transpose() * y;
 
-                return -1 / sqrt(1 - p * p) * x;
+                return -1 / sqrt(1 - p * p) * x * _r;
             }
 
             // Distance hessian in the Euclidean space (same as for the gradient)
@@ -115,7 +115,7 @@ namespace geometric_control {
             {
                 double p = x.transpose() * y, c = -1 / sqrt(1 - p * p);
 
-                return pow(c, 3) * p * x * x.transpose();
+                return pow(c, 3) * p * x * x.transpose() * _r;
             }
 
             Eigen::MatrixXd riemannGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::MatrixXd& grad) const

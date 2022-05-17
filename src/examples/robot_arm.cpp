@@ -118,63 +118,75 @@ int main(int argc, char** argv)
 {
     // Create Bundle DS for each manifold
     dynamics::BundleDynamics<FrankaRobot, TreeManifoldsImpl, ManifoldsMapping> robot;
-
     dynamics::BundleDynamics<manifolds::SpecialEuclidean<3>, TreeManifoldsImpl, ManifoldsMapping> se3;
-
     dynamics::BundleDynamics<manifolds::Sphere<2>, TreeManifoldsImpl, ManifoldsMapping> s2;
-    double s2_radius = 0.3;
-    Eigen::Vector3d s2_center(0.7, 0.0, 0.5);
-    s2.manifold().setRadius(s2_radius).setCenter(s2_center);
 
     // Bundle tree structure
     robot.addBundles(&se3);
     se3.addBundles(&s2);
 
-    // Add tasks to the leaf Bundle Dynamics over S2
-    s2.addTasks(
-        std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>(),
-        std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>()
-        // std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>()
-    );
+    // S2
+    double s2_radius = 0.3;
+    Eigen::Vector3d s2_center(0.7, 0.0, 0.5);
+    s2.manifold().setRadius(s2_radius).setCenter(s2_center);
 
-    // Set tasks' properties
+    double box[] = {0, M_PI, 0, 2 * M_PI};
+    size_t resolution = 100, num_samples = resolution * resolution;
+    Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
+                    gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
+                    X(num_samples, 2);
+    X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
+    Eigen::VectorXd potential(num_samples);
+    Eigen::MatrixXd embedding(num_samples, 3);
+
+    s2.addTasks(std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>());
     static_cast<tasks::DissipativeEnergy<manifolds::Sphere<2>>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
     Eigen::Vector3d a = s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
+    s2.addTasks(std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>());
     static_cast<tasks::PotentialEnergy<manifolds::Sphere<2>>&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
+    for (size_t i = 0; i < num_samples; i++) {
+        embedding.row(i) = s2.manifold().embedding(X.row(i));
+        potential(i) = s2.task(1).map(embedding.row(i))[0];
+    }
 
-    // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(ds.task(2)).setRadius(0.4).setCenter(Eigen::Vector2d(1.2, 3.5)).setMetricParams(1, 2);
+    size_t num_obstacles = 1;
+    double obs_radius = 0.1;
+    Eigen::MatrixXd obs_centers(num_obstacles, 2), obs_centers3d(num_obstacles, 3);
+    obs_centers << 1.2, 3.5;
 
-    // Generate random on S2
-    Eigen::VectorXd xInit = (s2_radius + 0.05) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center;
-    Eigen::Vector3d dir = -(xInit - s2_center).normalized();
-    Eigen::Matrix3d oTemp = geometric_control::tools::gramSchmidt(dir.transpose());
-    Eigen::Matrix3d oInit;
-    oInit.col(0) = oTemp.col(1);
-    oInit.col(1) = oTemp.col(2);
-    oInit.col(2) = oTemp.col(0);
-    std::cout << dir.transpose() << std::endl;
-    std::cout << oInit << std::endl;
-    // oInit.col(0) = dir;
+    for (size_t i = 0; i < num_obstacles; i++) {
+        // s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>());
+        // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(s2.task(i + 2))
+        //     .setRadius(obs_radius)
+        //     .setCenter(obs_centers.row(i))
+        //     .setMetricParams(1, 3);
+        obs_centers3d.row(i) = s2.manifold().embedding(obs_centers.row(i));
+    }
 
-    size_t dim = 7;
-    Eigen::VectorXd q = robot.manifold().inverseKinematics(xInit, oInit),
-                    dq = Eigen::VectorXd::Random(dim);
+    Eigen::Vector3d x = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
+                    v = Eigen::Vector3d::Zero(3);
+
+    // SE3 (SO3)
+    Eigen::MatrixXd R = geometric_control::tools::frameMatrix(-(x - s2_center).normalized());
+
+    // ROBOT
+    Eigen::VectorXd q = robot.manifold().inverseKinematics(x, R),
+                    dq = Eigen::VectorXd::Zero(7);
 
     // Simulation
-    const double T = 30, dt = 1e-3;
+    const double T = 50, dt = 1e-3;
     const size_t num_steps = std::ceil(T / dt) + 1;
 
     double t = 0;
     size_t step = 0;
 
     Simulator simulator;
-    simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
     simulator.addGround();
 
     // Sphere manifold
     bodies::SphereParams paramsSphere;
-    paramsSphere.setRadius(s2_radius).setMass(0.0).setFriction(0.5).setColor("grey");
+    paramsSphere.setRadius(s2_radius - 0.05).setMass(0.0).setFriction(0.5).setColor("grey");
     bodies::RigidBody sphere("sphere", paramsSphere);
 
     // For the moment create a duplicate robot (this has to be fixed)
@@ -183,14 +195,16 @@ int main(int argc, char** argv)
         sphere.setPosition(s2_center(0) + 0.1, s2_center(1), s2_center(2)),
         iiwa.activateGravity().setState(q));
 
-    simulator.initGraphics();
+    // simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
+    // simulator.initGraphics();
     // simulator.run();
 
     // Record
+    size_t dim = 3;
     Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
     record.row(0)(0) = t;
-    record.row(0).segment(1, dim) = q;
-    record.row(0).segment(dim + 1, dim) = dq;
+    record.row(0).segment(1, dim) = x; // q;
+    record.row(0).segment(dim + 1, dim) = v; // dq;
 
     {
         Timer timer;
@@ -198,26 +212,29 @@ int main(int argc, char** argv)
     }
 
     while (t < T && step < num_steps - 1) {
-        // Velocity
+        // Dynamics integration (robot)
         dq = dq + dt * robot(q, dq);
-
-        // Position
         q = q + dt * dq;
 
+        // Dynamics integration (s2)
+        v = v + dt * s2(x, v);
+        x = s2.manifold().retract(x, v, dt); // x + dt * v;
+
         // Step forward
-        simulator.agents()[0].setState(q);
-        simulator.step(t);
+        // simulator.agents()[0].setState(q);
+        // simulator.step(t);
         t += dt;
         step++;
 
         // Record
         record.row(step)(0) = t;
-        record.row(step).segment(1, dim) = q;
-        record.row(step).tail(dim) = dq;
+        record.row(step).segment(1, dim) = x; // q;
+        record.row(step).tail(dim) = v; // dq;
     }
 
     FileManager io_manager;
     io_manager.setFile("outputs/robot_bundle.csv").write(record);
+    io_manager.write("RECORD", record, "TARGET", a, "RADIUS", obs_radius, "CENTER", obs_centers3d, "EMBEDDING", embedding, "POTENTIAL", potential);
 
     return 0;
 }

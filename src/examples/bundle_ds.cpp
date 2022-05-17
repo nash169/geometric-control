@@ -85,7 +85,7 @@ int main(int argc, char** argv)
         center_obstacles.row(i) = ds.manifold().embedding(oCenter);
     }
 
-    // Embedding
+    // Embedding & potential
     Eigen::VectorXd potential(num_samples);
     Eigen::MatrixXd embedding(num_samples, dim + 1);
 

@@ -37,21 +37,20 @@ ax = fig_1.add_subplot(111, projection="3d")
 surf = ax.plot_surface(Xe, Ye, Ze, facecolors=cm.jet(
     Fp), antialiased=True, linewidth=0, alpha=0.25)
 fig_1.colorbar(surf, ax=ax)
-# ax.set_box_aspect((np.ptp(Xe), np.ptp(Ye), np.ptp(Ze)))
+ax.set_box_aspect((np.ptp(Xe), np.ptp(Ye), np.ptp(Ze)))
 
-# PLOT OBSTACLES
-obstacles = data["EMBEDDING"]
-for i in range(centers.shape[0]):
-    u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
-    x = centers[i, 0] + radius*np.cos(u)*np.sin(v)
-    y = centers[i, 1] + radius*np.sin(u)*np.sin(v)
-    z = centers[i, 2] + radius*np.cos(v)
-    ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
-    obstacles = np.append(
-        obstacles, np.concatenate((x.flatten()[:, np.newaxis], y.flatten()[:, np.newaxis], z.flatten()[:, np.newaxis]), axis=1), axis=0)
-
-ax.set_box_aspect((np.ptp(obstacles[:, 0]), np.ptp(
-    obstacles[:, 1]), np.ptp(obstacles[:, 2])))
+# # PLOT OBSTACLES
+# obstacles = data["EMBEDDING"]
+# for i in range(centers.shape[0]):
+#     u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+#     x = centers[i, 0] + radius*np.cos(u)*np.sin(v)
+#     y = centers[i, 1] + radius*np.sin(u)*np.sin(v)
+#     z = centers[i, 2] + radius*np.cos(v)
+#     ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
+#     obstacles = np.append(
+#         obstacles, np.concatenate((x.flatten()[:, np.newaxis], y.flatten()[:, np.newaxis], z.flatten()[:, np.newaxis]), axis=1), axis=0)
+# ax.set_box_aspect((np.ptp(obstacles[:, 0]), np.ptp(
+#     obstacles[:, 1]), np.ptp(obstacles[:, 2])))
 
 # PLOT TRAJECTORY
 ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black")

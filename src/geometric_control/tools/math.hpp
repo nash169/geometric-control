@@ -38,6 +38,17 @@ namespace geometric_control {
 
             return -M;
         }
+
+        Eigen::MatrixXd frameMatrix(const Eigen::VectorXd& u)
+        {
+            Eigen::Matrix3d oTemp = gramSchmidt(u.transpose());
+            Eigen::Matrix3d oInit;
+            oInit.col(0) = oTemp.col(1);
+            oInit.col(1) = oTemp.col(2);
+            oInit.col(2) = oTemp.col(0);
+
+            return oInit;
+        }
     } // namespace tools
 } // namespace geometric_control
 #endif // GEOMETRIC_CONTROL_TOOLS_MATH_HPP

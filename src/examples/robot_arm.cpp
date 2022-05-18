@@ -23,9 +23,12 @@
 
 #include <geometric_control/tools/math.hpp>
 
+#include <control_lib/spatial/SE3.hpp>
+
 using namespace geometric_control;
 using namespace beautiful_bullet;
 using namespace utils_lib;
+using namespace control_lib;
 
 // create the manifold multibody
 class FrankaRobot : public bodies::MultiBody {
@@ -181,6 +184,9 @@ int main(int argc, char** argv)
                     dq = Eigen::VectorXd::Zero(7);
     robot.manifold().setState(q);
 
+    // robot.addTasks(std::make_unique<tasks::DissipativeEnergy<FrankaRobot>>());
+    // static_cast<tasks::DissipativeEnergy<FrankaRobot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
+
     // Simulation
     const double T = 50, dt = 1e-3;
     const size_t num_steps = std::ceil(T / dt) + 1;
@@ -198,9 +204,14 @@ int main(int argc, char** argv)
 
     // For the moment create a duplicate robot (this has to be fixed)
     bodies::MultiBody iiwa("rsc/iiwa/urdf/iiwa14.urdf");
+    // iiwa.setPosition(-1.1, 0, 0);
+    // Eigen::VectorXd q_temp = iiwa.inverseKinematics(x, R, "lbr_iiwa_link_7");
+    Eigen::VectorXd q_temp(7);
+    q_temp << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
+    iiwa.setState(q_temp);
     simulator.add(
-        sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)),
-        iiwa.activateGravity().setPosition(-1.1, 0, 0).setState(q));
+        // sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)),
+        iiwa);
 
     simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
     simulator.initGraphics();
@@ -209,11 +220,11 @@ int main(int argc, char** argv)
     // QP Solver
     optimization::IDSolver qp(7, 6, true);
 
-    qp.setJointPositionLimits(iiwa.lowerLimits(), iiwa.upperLimits());
-    qp.setJointVelocityLimits(iiwa.velocityLimits());
-    qp.setJointAccelerationLimits(100 * Eigen::VectorXd::Ones(7));
-    qp.setJointTorqueLimits(iiwa.torquesLimits());
-    Eigen::VectorXd tau = iiwa.torques();
+    qp.setJointPositionLimits(simulator.agents()[0].lowerLimits(), simulator.agents()[0].upperLimits());
+    qp.setJointVelocityLimits(simulator.agents()[0].velocityLimits());
+    qp.setJointAccelerationLimits(50 * Eigen::VectorXd::Ones(7));
+    qp.setJointTorqueLimits(simulator.agents()[0].torquesLimits());
+    Eigen::VectorXd tau = simulator.agents()[0].torques();
 
     // Record
     size_t dim = 3;
@@ -227,6 +238,20 @@ int main(int argc, char** argv)
         std::cout << robot(q, dq).transpose() << std::endl;
     }
 
+    Eigen::Vector3d pos_des = x + Eigen::Vector3d(0.2, 0, 0);
+    Eigen::Matrix3d rot_des = Eigen::Matrix3d::Identity();
+    spatial::SE3 sDes(rot_des, pos_des);
+    Eigen::Matrix<double, 6, 7> jac = simulator.agents()[0].jacobian(),
+                                hess = Eigen::MatrixXd::Zero(6, 7),
+                                J, dJ;
+
+    Eigen::VectorXd temp = Eigen::VectorXd::Zero(6);
+    temp.head(3) = simulator.agents()[0].framePosition() + Eigen::Vector3d(0.0, 0.2, 0);
+
+    std::cout << "Robot Pose" << std::endl;
+    std::cout << simulator.agents()[0].framePose().transpose() << std::endl;
+    std::cout << temp.transpose() << std::endl;
+
     while (t < T && step < num_steps - 1) {
         // // Dynamics integration (robot)
         // dq = dq + dt * robot(q, dq);
@@ -238,10 +263,26 @@ int main(int argc, char** argv)
         x = s2.manifold().retract(x, v, dt); // x + dt * v;
 
         Eigen::Matrix<double, 6, 1> err;
-        err << a, 3 * geometric_control::tools::rotationError(iiwa.frameOrientation(), geometric_control::tools::frameMatrix(-x));
+        Eigen::Vector3d robot_pos = simulator.agents()[0].framePosition();
+        Eigen::Matrix3d robot_rot = simulator.agents()[0].frameOrientation();
+        // err = 3 * (sDes - spatial::SE3(robot_rot, robot_pos)) - 3 * simulator.agents()[0].frameVelocity();
 
-        bool result = qp.step(tau, iiwa.state(), iiwa.velocity(), err,
-            iiwa.jacobian(), iiwa.hessian(), iiwa.inertiaMatrix(), iiwa.nonLinearEffects(),
+        Eigen::MatrixXd wRb(6, 6);
+        wRb.setConstant(0.0);
+        wRb.block(0, 0, 3, 3) = robot_rot;
+        wRb.block(3, 3, 3, 3) = robot_rot;
+        J = wRb * simulator.agents()[0].jacobian();
+        dJ = wRb * simulator.agents()[0].hessian();
+
+        // err.head(3) = a;
+        // err.tail(3) = 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
+
+        err = -3 * (simulator.agents()[0].framePose() - temp);
+        err.tail(3).setZero();
+        err -= 0.3 * J * simulator.agents()[0].velocity();
+
+        bool result = qp.step(tau, simulator.agents()[0].state(), simulator.agents()[0].velocity(), err,
+            J, dJ, simulator.agents()[0].inertiaMatrix(), simulator.agents()[0].nonLinearEffects(),
             dt);
 
         // Step forward
@@ -250,6 +291,9 @@ int main(int argc, char** argv)
         simulator.step(t);
         t += dt;
         step++;
+
+        // hess = (simulator.agents()[0].jacobian() - jac) / dt;
+        // jac = simulator.agents()[0].jacobian();
 
         // Record
         record.row(step)(0) = t;

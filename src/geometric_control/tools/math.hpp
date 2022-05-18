@@ -39,7 +39,7 @@ namespace geometric_control {
             return -M;
         }
 
-        Eigen::MatrixXd frameMatrix(const Eigen::VectorXd& u)
+        Eigen::Matrix3d frameMatrix(const Eigen::VectorXd& u)
         {
             Eigen::Matrix3d oTemp = gramSchmidt(u.transpose());
             Eigen::Matrix3d oInit;
@@ -48,6 +48,13 @@ namespace geometric_control {
             oInit.col(2) = oTemp.col(0);
 
             return oInit;
+        }
+
+        Eigen::Vector3d rotationError(const Eigen::Matrix3d& R_current, const Eigen::Matrix3d& R_desired)
+        {
+            Eigen::AngleAxisd aa = Eigen::AngleAxisd(R_current.transpose() * R_desired);
+
+            return aa.axis() * aa.angle();
         }
     } // namespace tools
 } // namespace geometric_control

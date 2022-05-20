@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     // static_cast<tasks::DissipativeEnergy<FrankaRobot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
 
     // Simulation
-    const double T = 20, dt = 1e-3;
+    const double T = 40, dt = 1e-3;
     const size_t num_steps = std::ceil(T / dt) + 1;
 
     double t = 0;
@@ -205,9 +205,9 @@ int main(int argc, char** argv)
     // For the moment create a duplicate robot (this has to be fixed)
     bodies::MultiBody iiwa("rsc/iiwa/urdf/iiwa14.urdf");
     iiwa.setPosition(-1.1, 0, 0);
-    Eigen::VectorXd q_temp = iiwa.inverseKinematics(x, R, "lbr_iiwa_link_7", &ref_q);
-    // Eigen::VectorXd q_temp(7);
-    // q_temp << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
+    Eigen::VectorXd q_ref(7);
+    q_ref << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
+    Eigen::VectorXd q_temp = iiwa.inverseKinematics(x, R, "lbr_iiwa_link_7", &q_ref, 10);
     iiwa.setState(q_temp);
     simulator.add(
         sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)),
@@ -260,13 +260,14 @@ int main(int argc, char** argv)
         // q = q + dt * dq;
 
         // Dynamics integration (s2)
-        a = s2(x, v);
-        v = v + dt * a;
+        Eigen::Vector3d robot_pos = simulator.agents()[0].framePosition();
+        Eigen::Matrix3d robot_rot = simulator.agents()[0].frameOrientation();
+
+        a = s2(robot_pos, simulator.agents()[0].frameVelocity().head(3));
+        v = v + dt * s2(x, v);
         x = s2.manifold().retract(x, v, dt); // x + dt * v;
 
         Eigen::Matrix<double, 6, 1> err;
-        Eigen::Vector3d robot_pos = simulator.agents()[0].framePosition();
-        Eigen::Matrix3d robot_rot = simulator.agents()[0].frameOrientation();
         // err = 3 * (sDes - spatial::SE3(robot_rot, robot_pos)) - 3 * simulator.agents()[0].frameVelocity();
 
         Eigen::MatrixXd wRb(6, 6);
@@ -276,8 +277,8 @@ int main(int argc, char** argv)
         J = wRb * simulator.agents()[0].jacobian();
         dJ = wRb * simulator.agents()[0].hessian();
 
-        err.head(3) = 3 * a;
-        err.tail(3) = 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
+        err.head(3) = 1 * a - 5 * (robot_pos - robot_pos.normalized());
+        err.tail(3) = Eigen::Vector3d(0, 0, 0); // 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
 
         // err = -3 * (simulator.agents()[0].framePose() - temp);
         // err.tail(3).setZero();

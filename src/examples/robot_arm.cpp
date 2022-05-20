@@ -149,7 +149,7 @@ int main(int argc, char** argv)
     s2.addTasks(std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>());
     static_cast<tasks::DissipativeEnergy<manifolds::Sphere<2>>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
-    Eigen::Vector3d attractor = s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
+    Eigen::Vector3d attractor = s2.manifold().embedding(Eigen::Vector2d(2.5, 2.2)); // s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
     s2.addTasks(std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>());
     static_cast<tasks::PotentialEnergy<manifolds::Sphere<2>>&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(attractor);
     for (size_t i = 0; i < num_samples; i++) {
@@ -171,8 +171,8 @@ int main(int argc, char** argv)
         obs_centers3d.row(i) = s2.manifold().embedding(obs_centers.row(i));
     }
 
-    Eigen::Vector3d x = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
-                    v = Eigen::Vector3d::Zero(3),
+    Eigen::Vector3d x = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center, // s2.manifold().embedding(Eigen::Vector2d(2.5, 1)),
+        v = Eigen::Vector3d::Zero(3),
                     a = Eigen::Vector3d::Zero(3);
 
     // SE3 (SO3)
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     // static_cast<tasks::DissipativeEnergy<FrankaRobot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
 
     // Simulation
-    const double T = 50, dt = 1e-3;
+    const double T = 20, dt = 1e-3;
     const size_t num_steps = std::ceil(T / dt) + 1;
 
     double t = 0;
@@ -204,13 +204,13 @@ int main(int argc, char** argv)
 
     // For the moment create a duplicate robot (this has to be fixed)
     bodies::MultiBody iiwa("rsc/iiwa/urdf/iiwa14.urdf");
-    // iiwa.setPosition(-1.1, 0, 0);
-    // Eigen::VectorXd q_temp = iiwa.inverseKinematics(x, R, "lbr_iiwa_link_7");
-    Eigen::VectorXd q_temp(7);
-    q_temp << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
+    iiwa.setPosition(-1.1, 0, 0);
+    Eigen::VectorXd q_temp = iiwa.inverseKinematics(x, R, "lbr_iiwa_link_7", &ref_q);
+    // Eigen::VectorXd q_temp(7);
+    // q_temp << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
     iiwa.setState(q_temp);
     simulator.add(
-        // sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)),
+        sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)),
         iiwa);
 
     simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
@@ -232,6 +232,8 @@ int main(int argc, char** argv)
     record.row(0)(0) = t;
     record.row(0).segment(1, dim) = x; // q;
     record.row(0).segment(dim + 1, dim) = v; // dq;
+
+    Eigen::MatrixXd end_effector = Eigen::MatrixXd::Zero(num_steps, 3);
 
     {
         Timer timer;
@@ -274,11 +276,11 @@ int main(int argc, char** argv)
         J = wRb * simulator.agents()[0].jacobian();
         dJ = wRb * simulator.agents()[0].hessian();
 
-        // err.head(3) = a;
-        // err.tail(3) = 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
+        err.head(3) = 3 * a;
+        err.tail(3) = 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
 
-        err = -3 * (simulator.agents()[0].framePose() - temp);
-        err.tail(3).setZero();
+        // err = -3 * (simulator.agents()[0].framePose() - temp);
+        // err.tail(3).setZero();
         err -= 0.3 * J * simulator.agents()[0].velocity();
 
         bool result = qp.step(tau, simulator.agents()[0].state(), simulator.agents()[0].velocity(), err,
@@ -299,11 +301,14 @@ int main(int argc, char** argv)
         record.row(step)(0) = t;
         record.row(step).segment(1, dim) = x; // q;
         record.row(step).tail(dim) = v; // dq;
+
+        end_effector.row(step) = robot_pos;
     }
 
     FileManager io_manager;
     io_manager.setFile("outputs/robot_bundle.csv").write(record);
-    io_manager.write("RECORD", record, "TARGET", attractor, "RADIUS", obs_radius, "CENTER", obs_centers3d, "EMBEDDING", embedding, "POTENTIAL", potential);
+    io_manager.write("RECORD", record, "TARGET", attractor, "RADIUS", obs_radius, "CENTER", obs_centers3d, "EMBEDDING", embedding, "POTENTIAL", potential,
+        "EFFECTOR", end_effector);
 
     return 0;
 }

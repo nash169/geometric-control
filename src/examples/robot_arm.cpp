@@ -263,7 +263,7 @@ int main(int argc, char** argv)
         Eigen::Vector3d robot_pos = simulator.agents()[0].framePosition();
         Eigen::Matrix3d robot_rot = simulator.agents()[0].frameOrientation();
 
-        a = s2(robot_pos, simulator.agents()[0].frameVelocity().head(3));
+        a = s2(x, v); // s2(robot_pos, simulator.agents()[0].frameVelocity().head(3));
         v = v + dt * s2(x, v);
         x = s2.manifold().retract(x, v, dt); // x + dt * v;
 
@@ -277,7 +277,7 @@ int main(int argc, char** argv)
         J = wRb * simulator.agents()[0].jacobian();
         dJ = wRb * simulator.agents()[0].hessian();
 
-        err.head(3) = 1 * a - 5 * (robot_pos - robot_pos.normalized());
+        err.head(3) = 5 * a + 1 * (robot_pos - robot_pos.normalized());
         err.tail(3) = Eigen::Vector3d(0, 0, 0); // 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
 
         // err = -3 * (simulator.agents()[0].framePose() - temp);

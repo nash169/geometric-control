@@ -247,7 +247,7 @@ namespace geometric_control {
             // tau = M*x.segment(0,nb_joints_)+Cg;
 
             J_prev_ = J;
-            std::cout << "tau:" << tau.transpose() << std::endl;
+            // std::cout << "tau:" << tau.transpose() << std::endl;
             // std::cout << "ddq:" << x.segment(0,nb_joints_).transpose() << std::endl;
             // std::cout << "M:" << std::endl << M << std::endl;
             // std::cout << "slack:" << x.segment(2*nb_joints_,nb_slacks_).transpose() << std::endl;

@@ -189,7 +189,7 @@ namespace geometric_control {
             }
 
             // Hessian
-            Eigen::TensorFixedSize<double, Eigen::Sizes<N + 1, N, N>> embeddingHessian(const Eigen::Matrix<double, N, 1>& x) const
+            Eigen::TensorFixedSize<double, Eigen::Sizes<eDim(), dim(), dim()>> embeddingHessian(const Eigen::Matrix<double, N, 1>& x) const
             {
                 // std::cout << "General template" << std::endl;
                 Eigen::TensorFixedSize<double, Eigen::Sizes<N + 1, N, N>> hess;
@@ -200,7 +200,7 @@ namespace geometric_control {
             }
 
             // Metric
-            Eigen::Matrix<double, N, N> pullMetric(const Eigen::Matrix<double, N, 1>& x) const
+            Eigen::Matrix<double, dim(), dim()> pullMetric(const Eigen::Matrix<double, N, 1>& x) const
             {
                 // std::cout << "General template" << std::endl;
                 Eigen::Matrix<double, N, N> g;
@@ -214,7 +214,7 @@ namespace geometric_control {
             }
 
             // Metric Gradient
-            Eigen::TensorFixedSize<double, Eigen::Sizes<N, N, N>> pullMetricGrad(const Eigen::Matrix<double, N, 1>& x) const
+            Eigen::TensorFixedSize<double, Eigen::Sizes<dim(), dim(), dim()>> pullMetricGrad(const Eigen::Matrix<double, N, 1>& x) const
             {
                 // std::cout << "General template" << std::endl;
                 Eigen::TensorFixedSize<double, Eigen::Sizes<N, N, N>> grad;
@@ -232,14 +232,14 @@ namespace geometric_control {
             }
 
             // Christoffel symbols
-            Eigen::TensorFixedSize<double, Eigen::Sizes<2, 2, 2>> leviCivitaChristoffel(const Eigen::Matrix<double, N, 1>& x) const
+            Eigen::TensorFixedSize<double, Eigen::Sizes<dim(), dim(), dim()>> leviCivitaChristoffel(const Eigen::Matrix<double, N, 1>& x) const
             {
                 // std::cout << "General template" << std::endl;
-                return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
+                return tools::leviCivitaConnection(tools::TensorCast(pullMetric(x).inverse()), pullMetricGrad(x));
             }
 
             // Distance
-            double distChart(const Eigen::Matrix<double, N, 1>& x, const Eigen::Matrix<double, N, 1>& y)
+            double distChart(const Eigen::Matrix<double, dim(), 1>& x, const Eigen::Matrix<double, dim(), 1>& y)
             {
                 std::complex<double> d = (embedding(x) - embedding(y)).norm();
 

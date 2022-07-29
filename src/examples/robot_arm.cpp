@@ -33,31 +33,16 @@ using namespace control_lib;
 // create the manifold multibody
 class FrankaRobot : public bodies::MultiBody {
 public:
-    FrankaRobot() : bodies::MultiBody("rsc/iiwa/urdf/iiwa14.urdf"), _pose(-1.1, 0, 0, 0, 0, 0), _frame("lbr_iiwa_link_7")
-    {
-        setPosition(_pose(0), _pose(1), _pose(2));
-    }
+    FrankaRobot() : bodies::MultiBody("rsc/iiwa/urdf/iiwa14.urdf"), _frame("lbr_iiwa_link_7") {}
 
     static constexpr int dim() { return 7; }
     static constexpr int eDim() { return 7; }
 
-    Eigen::VectorXd map(const Eigen::VectorXd& q)
-    {
-        return this->setState(q).framePose(_frame) + _pose;
-    }
-
-    Eigen::MatrixXd jacobian(const Eigen::VectorXd& q)
-    {
-        return this->setState(q).jacobian(_frame);
-    }
-
-    Eigen::MatrixXd hessian(const Eigen::VectorXd& q, const Eigen::VectorXd& v)
-    {
-        return this->setState(q).setVelocity(v).hessian(_frame);
-    }
+    Eigen::VectorXd map(const Eigen::VectorXd& q) { return this->setState(q).framePose(_frame); }
+    Eigen::MatrixXd jacobian(const Eigen::VectorXd& q) { return this->setState(q).jacobian(_frame); }
+    Eigen::MatrixXd hessian(const Eigen::VectorXd& q, const Eigen::VectorXd& v) { return this->setState(q).setVelocity(v).jacobianDerivative(_frame); }
 
 protected:
-    Eigen::Matrix<double, 6, 1> _pose;
     std::string _frame;
 };
 
@@ -80,7 +65,8 @@ class ManifoldsMapping : public TreeManifoldsImpl {
     Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, manifolds::Sphere<2>& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 
 public:
-    ParentManifold* _manifold;
+    std::shared_ptr<ParentManifold> _manifold;
+    // ParentManifold* _manifold;
 };
 
 // Robot -> SE3
@@ -149,7 +135,7 @@ int main(int argc, char** argv)
     s2.addTasks(std::make_unique<tasks::DissipativeEnergy<manifolds::Sphere<2>>>());
     static_cast<tasks::DissipativeEnergy<manifolds::Sphere<2>>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
-    Eigen::Vector3d attractor = s2.manifold().embedding(Eigen::Vector2d(2.5, 2.2)); // s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
+    Eigen::Vector3d attractor = s2.manifold().embedding(Eigen::Vector2d(2.5, 2.2));
     s2.addTasks(std::make_unique<tasks::PotentialEnergy<manifolds::Sphere<2>>>());
     static_cast<tasks::PotentialEnergy<manifolds::Sphere<2>>&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(attractor);
     for (size_t i = 0; i < num_samples; i++) {
@@ -157,42 +143,43 @@ int main(int argc, char** argv)
         potential(i) = s2.task(1).map(embedding.row(i))[0];
     }
 
-    size_t num_obstacles = 1;
+    size_t num_obstacles = 0;
     double obs_radius = 0.1;
     Eigen::MatrixXd obs_centers(num_obstacles, 2), obs_centers3d(num_obstacles, 3);
     obs_centers << 1.2, 3.5;
 
     for (size_t i = 0; i < num_obstacles; i++) {
-        // s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>());
-        // static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(s2.task(i + 2))
-        //     .setRadius(obs_radius)
-        //     .setCenter(obs_centers.row(i))
-        //     .setMetricParams(1, 3);
+        s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<manifolds::Sphere<2>>>());
+        static_cast<tasks::ObstacleAvoidance<manifolds::Sphere<2>>&>(s2.task(i + 2))
+            .setRadius(obs_radius)
+            .setCenter(obs_centers.row(i))
+            .setMetricParams(1, 3);
         obs_centers3d.row(i) = s2.manifold().embedding(obs_centers.row(i));
     }
 
-    Eigen::Vector3d x = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center, // s2.manifold().embedding(Eigen::Vector2d(2.5, 1)),
-        v = Eigen::Vector3d::Zero(3),
+    Eigen::Vector3d x = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
+                    v = Eigen::Vector3d::Zero(3),
                     a = Eigen::Vector3d::Zero(3);
 
     // SE3 (SO3)
     Eigen::MatrixXd R = geometric_control::tools::frameMatrix(-(x - s2_center).normalized());
 
     // ROBOT
-    Eigen::VectorXd ref_q = Eigen::VectorXd::Zero(7),
-                    q = robot.manifold().inverseKinematics(x, R, "lbr_iiwa_link_7", &ref_q),
-                    dq = Eigen::VectorXd::Zero(7);
-    robot.manifold().setState(q);
+    Eigen::VectorXd q_ref(7);
+    q_ref << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
+    Eigen::VectorXd q = robot.manifold().inverseKinematics(x, R, "lbr_iiwa_link_7", &q_ref),
+                    dq = Eigen::VectorXd::Random(7);
+    robot.manifold().setPosition(-1.1, 0, 0).setState(q);
 
-    // robot.addTasks(std::make_unique<tasks::DissipativeEnergy<FrankaRobot>>());
-    // static_cast<tasks::DissipativeEnergy<FrankaRobot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
+    robot.addTasks(std::make_unique<tasks::DissipativeEnergy<FrankaRobot>>());
+    static_cast<tasks::DissipativeEnergy<FrankaRobot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
 
     // Simulation
     const double T = 40, dt = 1e-3;
     const size_t num_steps = std::ceil(T / dt) + 1;
 
     double t = 0;
-    size_t step = 0;
+    size_t steps = 0;
 
     Simulator simulator;
     simulator.addGround();
@@ -200,31 +187,22 @@ int main(int argc, char** argv)
     // Sphere manifold
     bodies::SphereParams paramsSphere;
     paramsSphere.setRadius(s2_radius - 0.2).setMass(0.0).setFriction(0.5).setColor("grey");
-    bodies::RigidBody sphere("sphere", paramsSphere);
+    std::shared_ptr<bodies::RigidBody> sphere = std::make_shared<bodies::RigidBody>("sphere", paramsSphere);
+    sphere->setPosition(s2_center(0), s2_center(1), s2_center(2));
 
-    // For the moment create a duplicate robot (this has to be fixed)
-    bodies::MultiBody iiwa("rsc/iiwa/urdf/iiwa14.urdf");
-    iiwa.setPosition(-1.1, 0, 0);
-    Eigen::VectorXd q_ref(7);
-    q_ref << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
-    Eigen::VectorXd q_temp = iiwa.inverseKinematics(x, R, "lbr_iiwa_link_7", &q_ref, 10);
-    iiwa.setState(q_temp);
-    simulator.add(
-        sphere.setPosition(s2_center(0), s2_center(1), s2_center(2)),
-        iiwa);
-
+    bodies::MultiBodyPtr robotPtr = robot.manifoldShared();
+    simulator.add(robotPtr);
     simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
-    simulator.initGraphics();
     // simulator.run();
 
     // QP Solver
     optimization::IDSolver qp(7, 6, true);
 
-    qp.setJointPositionLimits(simulator.agents()[0].lowerLimits(), simulator.agents()[0].upperLimits());
-    qp.setJointVelocityLimits(simulator.agents()[0].velocityLimits());
+    qp.setJointPositionLimits(robotPtr->positionLower(), robotPtr->positionUpper());
+    qp.setJointVelocityLimits(robotPtr->velocityUpper());
     qp.setJointAccelerationLimits(50 * Eigen::VectorXd::Ones(7));
-    qp.setJointTorqueLimits(simulator.agents()[0].torquesLimits());
-    Eigen::VectorXd tau = simulator.agents()[0].torques();
+    qp.setJointTorqueLimits(robotPtr->effortUpper());
+    Eigen::VectorXd tau = robotPtr->effort();
 
     // Record
     size_t dim = 3;
@@ -240,28 +218,30 @@ int main(int argc, char** argv)
         std::cout << robot(q, dq).transpose() << std::endl;
     }
 
-    Eigen::Vector3d pos_des = x + Eigen::Vector3d(0.2, 0, 0);
-    Eigen::Matrix3d rot_des = Eigen::Matrix3d::Identity();
-    spatial::SE3 sDes(rot_des, pos_des);
-    Eigen::Matrix<double, 6, 7> jac = simulator.agents()[0].jacobian(),
+    // Eigen::Vector3d pos_des = x + Eigen::Vector3d(0.2, 0, 0);
+    // Eigen::Matrix3d rot_des = Eigen::Matrix3d::Identity();
+    // spatial::SE3 sDes(rot_des, pos_des);
+    Eigen::Matrix<double, 6, 7> jac = robotPtr->jacobian(),
                                 hess = Eigen::MatrixXd::Zero(6, 7),
                                 J, dJ;
 
-    Eigen::VectorXd temp = Eigen::VectorXd::Zero(6);
-    temp.head(3) = simulator.agents()[0].framePosition() + Eigen::Vector3d(0.0, 0.2, 0);
+    // Eigen::VectorXd temp = Eigen::VectorXd::Zero(6);
+    // temp.head(3) = simulator.agents()[0].framePosition() + Eigen::Vector3d(0.0, 0.2, 0);
 
-    std::cout << "Robot Pose" << std::endl;
-    std::cout << simulator.agents()[0].framePose().transpose() << std::endl;
-    std::cout << temp.transpose() << std::endl;
+    // std::cout << "Robot Pose" << std::endl;
+    // std::cout << simulator.agents()[0].framePose().transpose() << std::endl;
+    // std::cout << temp.transpose() << std::endl;
 
-    while (t < T && step < num_steps - 1) {
+    simulator.initGraphics();
+
+    while (t < T && steps < num_steps - 1) {
         // // Dynamics integration (robot)
         // dq = dq + dt * robot(q, dq);
         // q = q + dt * dq;
 
         // Dynamics integration (s2)
-        Eigen::Vector3d robot_pos = simulator.agents()[0].framePosition();
-        Eigen::Matrix3d robot_rot = simulator.agents()[0].frameOrientation();
+        Eigen::Vector3d robot_pos = robotPtr->framePosition();
+        Eigen::Matrix3d robot_rot = robotPtr->frameOrientation();
 
         a = s2(x, v); // s2(robot_pos, simulator.agents()[0].frameVelocity().head(3));
         v = v + dt * s2(x, v);
@@ -274,36 +254,36 @@ int main(int argc, char** argv)
         wRb.setConstant(0.0);
         wRb.block(0, 0, 3, 3) = robot_rot;
         wRb.block(3, 3, 3, 3) = robot_rot;
-        J = wRb * simulator.agents()[0].jacobian();
-        dJ = wRb * simulator.agents()[0].hessian();
+        J = wRb * robotPtr->jacobian();
+        dJ = wRb * robotPtr->jacobianDerivative();
 
         err.head(3) = 5 * a + 1 * (robot_pos - robot_pos.normalized());
         err.tail(3) = Eigen::Vector3d(0, 0, 0); // 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
 
         // err = -3 * (simulator.agents()[0].framePose() - temp);
         // err.tail(3).setZero();
-        err -= 0.3 * J * simulator.agents()[0].velocity();
+        err -= 0.3 * J * robotPtr->velocity();
 
-        bool result = qp.step(tau, simulator.agents()[0].state(), simulator.agents()[0].velocity(), err,
-            J, dJ, simulator.agents()[0].inertiaMatrix(), simulator.agents()[0].nonLinearEffects(),
+        bool result = qp.step(tau, robotPtr->state(), robotPtr->velocity(), err,
+            J, dJ, robotPtr->inertiaMatrix(), robotPtr->nonLinearEffects(),
             dt);
 
         // Step forward
-        // simulator.agents()[0].setState(q);
-        simulator.agents()[0].setTorques(tau);
-        simulator.step(t);
+        // robotPtr->setState(q);
+        robotPtr->setTorques(tau);
+        simulator.step(steps);
         t += dt;
-        step++;
+        steps++;
 
         // hess = (simulator.agents()[0].jacobian() - jac) / dt;
         // jac = simulator.agents()[0].jacobian();
 
         // Record
-        record.row(step)(0) = t;
-        record.row(step).segment(1, dim) = x; // q;
-        record.row(step).tail(dim) = v; // dq;
+        record.row(steps)(0) = t;
+        record.row(steps).segment(1, dim) = x; // q;
+        record.row(steps).tail(dim) = v; // dq;
 
-        end_effector.row(step) = robot_pos;
+        end_effector.row(steps) = robot_pos;
     }
 
     FileManager io_manager;

@@ -9,8 +9,6 @@
 #include "geometric_control/tools/helper.hpp"
 #include "geometric_control/tools/math.hpp"
 
-#include <utils_lib/Timer.hpp>
-
 using namespace utils_lib;
 
 namespace geometric_control {
@@ -104,9 +102,12 @@ namespace geometric_control {
         template <typename Manifold, typename TreeManifoldsImpl, template <typename> typename Mapping>
         class BundleDynamics : public BundleDynamicsInterface<TreeManifoldsImpl> {
         public:
-            BundleDynamics() : _manifold(), _m(1.0)
+            BundleDynamics() : _m(1.0) // _manifold(),
             {
-                _mapping._manifold = &_manifold;
+                // std::cout << _manifold->eDim() << std::endl;
+                // _mapping._manifold = &_manifold;
+                _manifold = std::make_shared<Manifold>();
+                _mapping._manifold = _manifold;
             }
 
             // Dynamical System
@@ -176,6 +177,11 @@ namespace geometric_control {
             // Get manifold (for now not const reference but it should be)
             Manifold& manifold()
             {
+                return *_manifold;
+            }
+
+            std::shared_ptr<Manifold> manifoldShared()
+            {
                 return _manifold;
             }
 
@@ -201,6 +207,7 @@ namespace geometric_control {
             template <typename... Args>
             BundleDynamics& addTasks(std::unique_ptr<tasks::AbstractTask<Manifold>> task, Args... args)
             {
+                task->setManifold(_manifold);
                 _tasks.push_back(std::move(task));
 
                 if constexpr (sizeof...(args) > 0)
@@ -212,19 +219,19 @@ namespace geometric_control {
             // Recursive map computation
             Eigen::VectorXd mapFrom(const Eigen::VectorXd& x, TreeManifoldsImpl& node) override
             {
-                return node.map(x, _manifold);
+                return node.map(x, *_manifold);
             }
 
             // Recursive jacobian computation
             Eigen::MatrixXd jacobianFrom(const Eigen::VectorXd& x, TreeManifoldsImpl& node) override
             {
-                return node.jacobian(x, _manifold);
+                return node.jacobian(x, *_manifold);
             }
 
             // Recursive hessian computation
             Eigen::MatrixXd hessianFrom(const Eigen::VectorXd& x, const Eigen::VectorXd& v, TreeManifoldsImpl& node) override
             {
-                return node.hessian(x, v, _manifold);
+                return node.hessian(x, v, *_manifold);
             }
 
         protected:
@@ -242,7 +249,8 @@ namespace geometric_control {
             double _m;
 
             // Manifold
-            Manifold _manifold;
+            std::shared_ptr<Manifold> _manifold;
+            // Manifold _manifold;
 
             // Tree mapping
             Mapping<Manifold> _mapping;

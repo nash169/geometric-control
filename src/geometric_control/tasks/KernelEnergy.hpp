@@ -57,8 +57,8 @@ namespace geometric_control {
             // Gradient of the scalar function. It needs to be projected onto the tangent space
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                // return _M.distGrad(_a, x).transpose();
-                return _M.riemannGrad(x, _kernel.grad(x, _a).transpose());
+                // return _M->distGrad(_a, x).transpose();
+                return _M->riemannGrad(x, _kernel.grad(x, _a).transpose());
             }
 
             // Hessian
@@ -71,7 +71,7 @@ namespace geometric_control {
             {
                 // find a way not to calculate multiple times gradient
                 // maybe the projection might take place in the bundle DS
-                return _M.riemannHess(x, v, _M.distGrad(_a, x).transpose(), (_kernel.hess(x, _a) * v).transpose());
+                return _M->riemannHess(x, v, _M->distGrad(_a, x).transpose(), (_kernel.hess(x, _a) * v).transpose());
             }
 
             // Task manifold metric

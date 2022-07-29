@@ -8,9 +8,15 @@ namespace geometric_control {
         template <typename Manifold>
         class AbstractTask {
         public:
-            AbstractTask() : _M() {}
+            AbstractTask() = default;
 
-            virtual ~AbstractTask() {}
+            // AbstractTask(const std::shared_ptr<Manifold>& manifold) : _M(manifold) {}
+
+            // virtual ~AbstractTask() {}
+
+            std::shared_ptr<Manifold> manifold() { return _M; }
+
+            void setManifold(const std::shared_ptr<Manifold>& manifold) { _M = manifold; }
 
             // Space dimension
             virtual constexpr int dim() const = 0;
@@ -33,7 +39,7 @@ namespace geometric_control {
             virtual Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const
             {
                 Eigen::array<Eigen::IndexPair<int>, 1> c = {Eigen::IndexPair<int>(2, 0)};
-                return tools::MatrixCast(hessian(x).contract(tools::TensorCast(v), c), dim(), _M.eDim());
+                return tools::MatrixCast(hessian(x).contract(tools::TensorCast(v), c), dim(), _M->eDim());
             }
 
             // Task manifold metric
@@ -66,7 +72,8 @@ namespace geometric_control {
 
         protected:
             // Base manifold
-            Manifold _M;
+            std::shared_ptr<Manifold> _M;
+            // Manifold _M;
         };
     } // namespace tasks
 } // namespace geometric_control

@@ -14,7 +14,7 @@ namespace geometric_control {
                 _r = 1;
 
                 // Init obstacle center (in the embedding space)
-                _c = _M.embedding(Eigen::VectorXd::Zero(Manifold::dim()));
+                _c = Eigen::VectorXd::Zero(Manifold::eDim()); // _M->embedding(Eigen::VectorXd::Zero(Manifold::dim()));
 
                 // Init metric params
                 _a = 1;
@@ -32,7 +32,7 @@ namespace geometric_control {
             // In order to avoid issues the center location is always passed in chart coordinate
             ObstacleAvoidance& setCenter(const Eigen::VectorXd& c)
             {
-                _c = _M.embedding(c);
+                _c = _M->embedding(c);
                 return *this;
             }
 
@@ -60,25 +60,25 @@ namespace geometric_control {
             // Map between configuration and task manifolds
             Eigen::VectorXd map(const Eigen::VectorXd& x) const override
             {
-                return tools::makeVector(_M.dist(_c, x) - _r);
+                return tools::makeVector(_M->dist(_c, x) - _r);
             }
 
             // Jacobian
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                // return _M.distGrad(_c, x).transpose();
-                return _M.riemannGrad(x, _M.distGrad(_c, x).transpose());
+                // return _M->distGrad(_c, x).transpose();
+                return _M->riemannGrad(x, _M->distGrad(_c, x).transpose());
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                return tools::TensorCast(_M.distHess(_c, x), 1, x.rows(), x.rows());
+                return tools::TensorCast(_M->distHess(_c, x), 1, x.rows(), x.rows());
             }
 
             Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
-                return _M.riemannHess(x, v, _M.distGrad(_c, x).transpose(), (_M.distHess(_c, x) * v).transpose());
+                return _M->riemannHess(x, v, _M->distGrad(_c, x).transpose(), (_M->distHess(_c, x) * v).transpose());
             }
 
             // Task manifold metric

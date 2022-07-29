@@ -1,6 +1,7 @@
 #include <iostream>
 #include <random>
 #include <utils_lib/FileManager.hpp>
+#include <utils_lib/Timer.hpp>
 
 // Bundle DS
 #include <geometric_control/dynamics/BundleDynamics.hpp>
@@ -18,8 +19,8 @@ using namespace geometric_control;
 using namespace utils_lib;
 
 // Define base manifold
-using Manifold = manifolds::Sphere<2>;
-// using Manifold = manifolds::Euclidean<2>;
+// using Manifold = manifolds::Sphere<2>;
+using Manifold = manifolds::Euclidean<2>;
 
 // Define the nodes in the tree dynamics
 using TreeManifoldsImpl = TreeManifolds<Manifold>;
@@ -32,7 +33,8 @@ class ManifoldsMapping : public TreeManifoldsImpl {
     Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, Manifold& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 
 public:
-    ParentManifold* _manifold;
+    std::shared_ptr<ParentManifold> _manifold;
+    // ParentManifold* _manifold;
 };
 
 // Parent Manifold map specialization
@@ -141,7 +143,8 @@ int main(int argc, char** argv)
     }
 
     FileManager io_manager;
-    io_manager.setFile("outputs/sphere_bundle.csv");
+    // io_manager.setFile("outputs/sphere_bundle.csv");
+    io_manager.setFile("outputs/plane_bundle.csv");
     io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;

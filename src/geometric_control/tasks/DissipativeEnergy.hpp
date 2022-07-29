@@ -23,7 +23,7 @@ namespace geometric_control {
             // Space dimension
             constexpr int dim() const override
             {
-                return _M.eDim();
+                return _M->eDim();
             }
 
             // Optimization weight

@@ -19,8 +19,8 @@ using namespace geometric_control;
 using namespace utils_lib;
 
 // Define base manifold
-// using Manifold = manifolds::Sphere<2>;
-using Manifold = manifolds::Euclidean<2>;
+using Manifold = manifolds::Sphere<2>;
+// using Manifold = manifolds::Euclidean<2>;
 
 // Define the nodes in the tree dynamics
 using TreeManifoldsImpl = TreeManifolds<Manifold>;
@@ -34,7 +34,6 @@ class ManifoldsMapping : public TreeManifoldsImpl {
 
 public:
     std::shared_ptr<ParentManifold> _manifold;
-    // ParentManifold* _manifold;
 };
 
 // Parent Manifold map specialization
@@ -59,6 +58,8 @@ int main(int argc, char** argv)
 
     // Create DS on a specific manifold
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
+    ds.manifoldShared()->setRadius(0.5);
+    ds.manifoldShared()->setCenter(Eigen::Vector3d::Random());
 
     // Assign potential and dissipative task to the DS
     ds.addTasks(std::make_unique<tasks::DissipativeEnergy<Manifold>>());
@@ -69,7 +70,7 @@ int main(int argc, char** argv)
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
     // Generate random obstacles over the sphere
-    size_t num_obstacles = 50;
+    size_t num_obstacles = 2;
     double radius_obstacles = 0.1;
     Eigen::MatrixXd center_obstacles(num_obstacles, ds.manifold().eDim());
 
@@ -80,10 +81,10 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < num_obstacles; i++) {
         ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
         Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
-        static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
-            .setRadius(radius_obstacles)
-            .setCenter(oCenter)
-            .setMetricParams(1, 3);
+        // static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
+        //     .setRadius(radius_obstacles)
+        //     .setCenter(oCenter)
+        //     .setMetricParams(1, 3);
         center_obstacles.row(i) = ds.manifold().embedding(oCenter);
     }
 
@@ -143,8 +144,7 @@ int main(int argc, char** argv)
     }
 
     FileManager io_manager;
-    // io_manager.setFile("outputs/sphere_bundle.csv");
-    io_manager.setFile("outputs/plane_bundle.csv");
+    io_manager.setFile("outputs/surface_bundle.csv");
     io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;

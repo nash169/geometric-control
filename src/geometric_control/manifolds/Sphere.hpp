@@ -85,19 +85,20 @@ namespace geometric_control {
             // Projector (project over the tangent space in the Euclidean embedding)
             Eigen::Matrix<double, eDim(), 1> project(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& u) const
             {
-                return u - (x.transpose() * u) * x;
+                return u - ((x - _c).normalized().transpose() * u) * (x - _c).normalized();
             }
 
             // Retraction
             Eigen::Matrix<double, eDim(), 1> retract(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& u, const double& t = 1) const
             {
-                return _r * (x - _c + t * u) / (x - _c + t * u).norm() + _c;
+                auto p = (x - _c).normalized();
+                return _r * (p + t * u) / (p + t * u).norm() + _c;
             }
 
             // Distance in the Euclidean embedding
             double dist(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
             {
-                std::complex<double> d = (x - y).norm();
+                std::complex<double> d = ((x - _c).normalized() - (y - _c).normalized()).norm();
 
                 return 2 * asin(0.5 * d).real() * _r;
             }
@@ -105,17 +106,19 @@ namespace geometric_control {
             // Distance gradient in the Euclidean embedding (here differential components and the gradient coincides due to the linearity of the space)
             Eigen::Matrix<double, eDim(), 1> distGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
             {
-                double p = x.transpose() * y;
+                double p = (x - _c).normalized().transpose() * (y - _c).normalized();
+                return -_r / sqrt(1 - p * p) * (x - _c).normalized();
 
-                return -1 / sqrt(1 - p * p) * x * _r;
+                // double d = (x.normalized() - y.normalized()).norm();
+                // return (y - x) / (2 * d * (1 - std::pow(d, 2))) * _r;
             }
 
             // Distance hessian in the Euclidean space (same as for the gradient)
             Eigen::Matrix<double, eDim(), eDim()> distHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
             {
-                double p = x.transpose() * y, c = -1 / sqrt(1 - p * p);
+                double p = (x - _c).normalized().transpose() * (y - _c).normalized(), c = -1 / sqrt(1 - p * p);
 
-                return pow(c, 3) * p * x * x.transpose() * _r;
+                return pow(c, 3) * p * (x - _c).normalized() * (x - _c).normalized().transpose() * _r;
             }
 
             Eigen::MatrixXd riemannGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::MatrixXd& grad) const

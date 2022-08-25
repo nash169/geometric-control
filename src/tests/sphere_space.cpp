@@ -13,19 +13,19 @@ int main(int argc, char** argv)
     std::cout << "SPECIALIZED TEMPLATE" << std::endl;
     manifolds::Sphere<2> s2;
 
-    std::cout << "Embedding" << std::endl;
-    std::cout << s2.embedding(x).transpose() << std::endl;
-    std::cout << "Jacobian" << std::endl;
-    std::cout << s2.embeddingJacobian(x) << std::endl;
-    std::cout << "Hessian" << std::endl;
-    std::cout << s2.embeddingHessian(x) << std::endl;
-    std::cout << "Metric" << std::endl;
-    std::cout << s2.pullMetric(x) << std::endl;
-    std::cout << "Metric Grad" << std::endl;
-    std::cout << s2.pullMetricGrad(x) << std::endl;
-    std::cout << "Christoffel" << std::endl;
-    std::cout << s2.leviCivitaChristoffel(x) << std::endl;
-    std::cout << tools::leviCivitaConnection(tools::TensorCast(s2.pullMetric(x).inverse()), s2.pullMetricGrad(x)) << std::endl;
+    // std::cout << "Embedding" << std::endl;
+    // std::cout << s2.embedding(x).transpose() << std::endl;
+    // std::cout << "Jacobian" << std::endl;
+    // std::cout << s2.embeddingJacobian(x) << std::endl;
+    // std::cout << "Hessian" << std::endl;
+    // std::cout << s2.embeddingHessian(x) << std::endl;
+    // std::cout << "Metric" << std::endl;
+    // std::cout << s2.pullMetric(x) << std::endl;
+    // std::cout << "Metric Grad" << std::endl;
+    // std::cout << s2.pullMetricGrad(x) << std::endl;
+    // std::cout << "Christoffel" << std::endl;
+    // std::cout << s2.leviCivitaChristoffel(x) << std::endl;
+    // std::cout << tools::leviCivitaConnection(tools::TensorCast(s2.pullMetric(x).inverse()), s2.pullMetricGrad(x)) << std::endl;
 
     // std::cout << "GENERIC TEMPLATE" << std::endl;
     // manifolds::Sphere sn;

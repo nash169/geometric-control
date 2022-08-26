@@ -39,7 +39,7 @@ namespace geometric_control {
             const double& radius() { return _r; }
 
             // Get center
-            const Eigen::Matrix<double, N, 1>& center() { return _c; }
+            const Eigen::Matrix<double, eDim(), 1>& center() { return _c; }
 
             // Set radius
             Sphere& setRadius(const double& radius)

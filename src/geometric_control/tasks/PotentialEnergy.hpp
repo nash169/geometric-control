@@ -37,7 +37,7 @@ namespace geometric_control {
             }
 
             // Optimization weight
-            Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+            virtual Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
                 return tools::makeMatrix(1);
             }

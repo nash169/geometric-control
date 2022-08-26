@@ -59,6 +59,34 @@ Eigen::MatrixXd ManifoldsMapping<R3>::hessian(const Eigen::VectorXd& x, const Ei
         - x.dot(v) / std::pow(x.norm(), 3) * Eigen::MatrixXd::Identity(x.size(), x.size());
 }
 
+// Potential Energy R3 Specialization
+class PotentialEnergyR3 : public tasks::PotentialEnergy<R3> {
+public:
+    PotentialEnergyR3() : tasks::PotentialEnergy<R3>(), _a(10), _b(5) {}
+
+    Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+    {
+        return tools::makeMatrix(1 / (1 + std::exp(_a - _b * x.norm())));
+    }
+
+protected:
+    double _a, _b;
+};
+
+// Potential Energy S2 Specialization
+class PotentialEnergyS2 : public tasks::PotentialEnergy<S2> {
+public:
+    PotentialEnergyS2() : tasks::PotentialEnergy<S2>(), _tau(0.1) {}
+
+    Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+    {
+        return tools::makeMatrix(std::exp(-std::pow(x.norm() - 1, 2) / _tau));
+    }
+
+protected:
+    double _tau;
+};
+
 int main(int argc, char** argv)
 {
     // Create Euclidean 3D Space
@@ -74,9 +102,9 @@ int main(int argc, char** argv)
     static_cast<tasks::DissipativeEnergy<S2>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
     // Potential task over S2
-    s2.addTasks(std::make_unique<tasks::PotentialEnergy<S2>>());
+    s2.addTasks(std::make_unique<PotentialEnergyS2>());
     Eigen::Vector3d a1 = s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
-    static_cast<tasks::PotentialEnergy<S2>&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a1);
+    static_cast<PotentialEnergyS2&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a1);
 
     // Obstacles tasks over S2
     size_t num_obstacles = 2;
@@ -104,8 +132,8 @@ int main(int argc, char** argv)
 
     // Potential task over R3
     Eigen::Vector3d a2 = s2.manifold().center();
-    ds.addTasks(std::make_unique<tasks::PotentialEnergy<R3>>());
-    static_cast<tasks::PotentialEnergy<R3>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a2);
+    ds.addTasks(std::make_unique<PotentialEnergyR3>());
+    static_cast<PotentialEnergyR3&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a2);
 
     // Tree structure
     ds.addBundles(&s2);
@@ -156,7 +184,7 @@ int main(int argc, char** argv)
     // Save data
     FileManager io_manager;
     io_manager.setFile("outputs/euclidean_bundle.csv");
-    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
+    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a1, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;
 }

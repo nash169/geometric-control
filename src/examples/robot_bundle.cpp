@@ -125,8 +125,8 @@ int main(int argc, char** argv)
     se3.addBundles(&s2);
 
     // S2
-    double s2_radius = 1;
-    Eigen::Vector3d s2_center(0, 0, 0); // (0.7, 0.0, 0.5);
+    double s2_radius = 0.3;
+    Eigen::Vector3d s2_center(0.7, 0.0, 0.5);
     s2.manifold().setRadius(s2_radius).setCenter(s2_center);
 
     double box[] = {0, M_PI, 0, 2 * M_PI};
@@ -172,10 +172,12 @@ int main(int argc, char** argv)
 
     // ROBOT
     Eigen::VectorXd q_ref(7);
-    q_ref << 0, 0, 0, -M_PI / 2, 0, M_PI / 2, 0;
+    q_ref << 0, 0, 0, -M_PI / 4, 0, M_PI / 4, 0;
     Eigen::VectorXd q = robot.manifold().inverseKinematics(x, R, "lbr_iiwa_link_7", &q_ref),
                     dq = Eigen::VectorXd::Zero(7);
-    robot.manifold().setPosition(-1.1, 0, 0).setState(q);
+    // robot.manifold().setPosition(-1.1, 0, 0).setState(q);
+    robot.manifold().setState(q_ref);
+    std::cout << robot.manifold().framePosition().transpose() << std::endl;
 
     robot.addTasks(std::make_unique<tasks::DissipativeEnergy<Robot>>());
     static_cast<tasks::DissipativeEnergy<Robot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
@@ -192,7 +194,7 @@ int main(int argc, char** argv)
 
     // Sphere manifold
     bodies::SphereParams paramsSphere;
-    paramsSphere.setRadius(s2_radius - 0.2).setMass(0.0).setFriction(0.5).setColor("grey");
+    paramsSphere.setRadius(s2_radius).setMass(0.0).setFriction(0.5).setColor("grey");
     std::shared_ptr<bodies::RigidBody> sphere = std::make_shared<bodies::RigidBody>("sphere", paramsSphere);
     sphere->setPosition(s2_center(0), s2_center(1), s2_center(2));
 
@@ -219,10 +221,10 @@ int main(int argc, char** argv)
 
     // Eigen::MatrixXd end_effector = Eigen::MatrixXd::Zero(num_steps, 3);
 
-    {
-        Timer timer;
-        std::cout << robot(q, dq).transpose() << std::endl;
-    }
+    // {
+    //     Timer timer;
+    //     std::cout << robot(q, dq).transpose() << std::endl;
+    // }
     simulator.run();
 
     // // Eigen::Vector3d pos_des = x + Eigen::Vector3d(0.2, 0, 0);

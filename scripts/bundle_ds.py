@@ -37,7 +37,7 @@ mappable.set_array(Fp)
 fig_1 = plt.figure()
 ax = fig_1.add_subplot(111, projection="3d")
 surf = ax.plot_surface(Xe, Ye, Ze, facecolors=colors,
-                       antialiased=True, linewidth=0, alpha=0.5)
+                       antialiased=True, linewidth=0, alpha=1)
 fig_1.colorbar(mappable,  ax=ax, label=r"$\phi$")
 ax.set_box_aspect((np.ptp(Xe), np.ptp(Ye), np.ptp(Ze)))
 
@@ -51,6 +51,7 @@ for i in range(centers.shape[0]):
     ax.plot_surface(x, y, z, linewidth=0.0, cstride=1, rstride=1)
     obstacles = np.append(
         obstacles, np.concatenate((x.flatten()[:, np.newaxis], y.flatten()[:, np.newaxis], z.flatten()[:, np.newaxis]), axis=1), axis=0)
+obstacles = np.append(obstacles, ds[:, 1:4], axis=0)
 ax.set_box_aspect((np.ptp(obstacles[:, 0]), np.ptp(
     obstacles[:, 1]), np.ptp(obstacles[:, 2])))
 

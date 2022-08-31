@@ -37,7 +37,7 @@ mappable.set_array(Fp)
 fig_1 = plt.figure()
 ax = fig_1.add_subplot(111, projection="3d")
 surf = ax.plot_surface(Xe, Ye, Ze, facecolors=colors,
-                       antialiased=True, linewidth=0, alpha=1)
+                       antialiased=True, linewidth=0, alpha=0.5)
 fig_1.colorbar(mappable,  ax=ax, label=r"$\phi$")
 ax.set_box_aspect((np.ptp(Xe), np.ptp(Ye), np.ptp(Ze)))
 
@@ -56,7 +56,9 @@ ax.set_box_aspect((np.ptp(obstacles[:, 0]), np.ptp(
     obstacles[:, 1]), np.ptp(obstacles[:, 2])))
 
 # PLOT TRAJECTORY
+check = norm((ds[:, 1:4] - np.array([[0.7, 0.0, 0.5]]))/0.3, axis=1) < 1
 ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black", label="Trajectory")
+ax.plot(ds[check, 1], ds[check, 2], ds[check, 3], color="red")
 # target
 ax.scatter(target[0], target[1],  target[2], color="red", label="Target")
 # init pos

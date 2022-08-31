@@ -59,16 +59,16 @@ Eigen::MatrixXd ManifoldsMapping<R3>::hessian(const Eigen::VectorXd& x, const Ei
         - x.dot(v) / std::pow(x.norm(), 3) * Eigen::MatrixXd::Identity(x.size(), x.size());
 }
 
-// Potential Energy R3 Specialization
+// Potential and Dissipative Energy R3 Specialization
 class PotentialEnergyR3 : public tasks::PotentialEnergy<R3> {
 public:
-    PotentialEnergyR3() : tasks::PotentialEnergy<R3>(), _a(25), _b(20), _r(0.3), _c(Eigen::Vector3d(0.7, 0.0, 0.5)) {}
+    PotentialEnergyR3() : tasks::PotentialEnergy<R3>(), _a(30), _b(20), _r(0.3), _c(Eigen::Vector3d(0.7, 0.0, 0.5)) {}
 
     Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
     {
-        // double d = (x - _c).norm() / _r;
-        // return tools::makeMatrix(0.1 * (1 / (1 + std::exp(_a - _b * d))));
-        return tools::makeMatrix(1);
+        double d = (x - _c).norm() / _r;
+        return tools::makeMatrix(1 / (1 + std::exp(_a - _b * d)));
+        // return tools::makeMatrix(1);
     }
 
 protected:
@@ -80,16 +80,54 @@ protected:
     Eigen::Vector3d _c;
 };
 
-// Potential Energy S2 Specialization
-class PotentialEnergyS2 : public tasks::PotentialEnergy<S2> {
+class DissipativeEnergyR3 : public tasks::DissipativeEnergy<R3> {
 public:
-    PotentialEnergyS2() : tasks::PotentialEnergy<S2>(), _tau(1e-3), _r(0.3), _c(Eigen::Vector3d(0.7, 0.0, 0.5)) {}
+    DissipativeEnergyR3() : tasks::DissipativeEnergy<R3>(), _a(30), _b(20), _r(0.3), _c(Eigen::Vector3d(0.7, 0.0, 0.5)) {}
 
     Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
     {
-        // double d = (x - _c).norm() / _r;
-        // return tools::makeMatrix(std::exp(-std::pow(d - 1, 2) / _tau));
-        return tools::makeMatrix(1);
+        double d = (x - _c).norm() / _r;
+        return (0.1 + 1 / (1 + std::exp(_a - _b * d))) * Eigen::MatrixXd::Identity(x.rows(), x.rows());
+    }
+
+protected:
+    // Modulation params
+    double _a, _b;
+
+    // Sphere params
+    double _r;
+    Eigen::Vector3d _c;
+};
+
+// Potential and Dissipative Energy S2 Specialization
+class PotentialEnergyS2 : public tasks::PotentialEnergy<S2> {
+public:
+    PotentialEnergyS2() : tasks::PotentialEnergy<S2>(), _tau(1e-2), _r(0.3), _c(Eigen::Vector3d(0.7, 0.0, 0.5)) {}
+
+    Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+    {
+        double d = (x - _c).norm() / _r;
+        return tools::makeMatrix(std::exp(-std::pow(d - 1, 2) / _tau));
+        // return tools::makeMatrix(0);
+    }
+
+protected:
+    // Modulation params
+    double _tau;
+
+    // Sphere params
+    double _r;
+    Eigen::Vector3d _c;
+};
+
+class DissipativeEnergyS2 : public tasks::DissipativeEnergy<S2> {
+public:
+    DissipativeEnergyS2() : tasks::DissipativeEnergy<S2>(), _tau(1e-2), _r(0.3), _c(Eigen::Vector3d(0.7, 0.0, 0.5)) {}
+
+    Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+    {
+        double d = (x - _c).norm() / _r;
+        return std::exp(-std::pow(d - 1, 2) / _tau) * Eigen::MatrixXd::Identity(x.rows(), x.rows());
     }
 
 protected:
@@ -109,16 +147,16 @@ int main(int argc, char** argv)
     // Create DS on a specific manifold
     dynamics::BundleDynamics<S2, TreeManifoldsImpl, ManifoldsMapping> s2;
     s2.manifoldShared()->setRadius(0.3);
-    // s2.manifoldShared()->setCenter(Eigen::Vector3d(0.7, 0.0, 0.5));
+    s2.manifoldShared()->setCenter(Eigen::Vector3d(0.7, 0.0, 0.5));
 
     // Dissipative task over S2
-    s2.addTasks(std::make_unique<tasks::DissipativeEnergy<S2>>());
-    static_cast<tasks::DissipativeEnergy<S2>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
+    s2.addTasks(std::make_unique<DissipativeEnergyS2>());
+    static_cast<DissipativeEnergyS2&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
     // Potential task over S2
     s2.addTasks(std::make_unique<PotentialEnergyS2>());
-    Eigen::Vector3d a1 = s2.manifold().embedding(Eigen::Vector2d(1.5, 3));
-    static_cast<PotentialEnergyS2&>(s2.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a1);
+    Eigen::Vector3d a1 = s2.manifold().embedding(Eigen::Vector2d(1.5, 3)); // s2.manifold().embedding(Eigen::Vector2d(2.5, 2.7));
+    static_cast<PotentialEnergyS2&>(s2.task(1)).setStiffness(2 * Eigen::Matrix3d::Identity()).setAttractor(a1);
 
     // Obstacles tasks over S2
     size_t num_obstacles = 2;
@@ -132,7 +170,7 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < num_obstacles; i++) {
         s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
         Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
-        // static_cast<tasks::ObstacleAvoidance<Manifold>&>(s2.task(i + 2))
+        // static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(i + 2))
         //     .setRadius(radius_obstacles)
         //     .setCenter(oCenter)
         //     .setMetricParams(1, 3);
@@ -140,23 +178,23 @@ int main(int argc, char** argv)
     }
 
     // Dissipative task over R3
-    ds.addTasks(std::make_unique<tasks::DissipativeEnergy<R3>>());
+    ds.addTasks(std::make_unique<DissipativeEnergyR3>());
     Eigen::Matrix3d D = 2 * Eigen::MatrixXd::Identity(ds.manifoldShared()->dim(), ds.manifoldShared()->dim());
-    static_cast<tasks::DissipativeEnergy<R3>&>(ds.task(0)).setDissipativeFactor(D);
+    static_cast<DissipativeEnergyR3&>(ds.task(0)).setDissipativeFactor(D);
 
     // Potential task over R3
     Eigen::Vector3d a2 = s2.manifold().center();
     ds.addTasks(std::make_unique<PotentialEnergyR3>());
-    static_cast<PotentialEnergyR3&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a2);
+    static_cast<PotentialEnergyR3&>(ds.task(1)).setStiffness(1 * Eigen::Matrix3d::Identity()).setAttractor(a2);
 
     // Tree structure
     ds.addBundles(&s2);
 
     // Simulation
-    double time = 0, max_time = 100, dt = 0.01;
+    double time = 0, max_time = 100, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = Eigen::Vector3d(0.408843, 0, 1.06284),
-                    v = Eigen::Vector3d::Zero();
+    Eigen::Vector3d x = Eigen::Vector3d(1, 1, 1), // Eigen::Vector3d(0.408843, 0, 1.06284),
+        v = Eigen::Vector3d::Zero();
 
     {
         Timer timer;
@@ -182,6 +220,11 @@ int main(int argc, char** argv)
         record.row(index).segment(1, ds.manifoldShared()->dim()) = x;
         record.row(index).tail(ds.manifoldShared()->dim()) = v;
     }
+
+    PotentialEnergyS2 temp;
+    std::cout << temp.weight(x, v) << std::endl;
+    PotentialEnergyR3 temp2;
+    std::cout << temp2.weight(x, v) << std::endl;
 
     // Get S2 embedding and potential function for visualization
     double box[] = {0, M_PI, 0, 2 * M_PI};

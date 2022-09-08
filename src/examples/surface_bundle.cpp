@@ -58,20 +58,22 @@ int main(int argc, char** argv)
 
     // Create DS on a specific manifold
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
-    ds.manifoldShared()->setRadius(0.5);
-    ds.manifoldShared()->setCenter(Eigen::Vector3d::Random());
+    double radius = 0.3;
+    Eigen::Vector3d center = Eigen::Vector3d(0.0, 0.0, 0.0); // Eigen::Vector3d(0.7, 0.0, 0.5);
+    ds.manifoldShared()->setRadius(radius);
+    ds.manifoldShared()->setCenter(center);
 
     // Assign potential and dissipative task to the DS
     ds.addTasks(std::make_unique<tasks::DissipativeEnergy<Manifold>>());
     static_cast<tasks::DissipativeEnergy<Manifold>&>(ds.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
     ds.addTasks(std::make_unique<tasks::PotentialEnergy<Manifold>>());
-    Eigen::Vector3d a = ds.manifold().embedding(Eigen::Vector2d(1.5, 3));
+    Eigen::Vector3d a = radius * Eigen::Vector3d(0, -1, 1).normalized() + center; // ds.manifold().embedding(Eigen::Vector2d(1.5, 3));
     static_cast<tasks::PotentialEnergy<Manifold>&>(ds.task(1)).setStiffness(Eigen::Matrix3d::Identity()).setAttractor(a);
 
     // Generate random obstacles over the sphere
-    size_t num_obstacles = 2;
-    double radius_obstacles = 0.1;
+    size_t num_obstacles = 1;
+    double radius_obstacles = 0.05;
     Eigen::MatrixXd center_obstacles(num_obstacles, ds.manifold().eDim());
 
     std::random_device rd;
@@ -80,11 +82,12 @@ int main(int argc, char** argv)
 
     for (size_t i = 0; i < num_obstacles; i++) {
         ds.addTasks(std::make_unique<tasks::ObstacleAvoidance<Manifold>>());
-        Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
-        // static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
-        //     .setRadius(radius_obstacles)
-        //     .setCenter(oCenter)
-        //     .setMetricParams(1, 3);
+        // Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
+        Eigen::Vector2d oCenter = Eigen::Vector2d(1.9, 2.0);
+        static_cast<tasks::ObstacleAvoidance<Manifold>&>(ds.task(i + 2))
+            .setRadius(radius_obstacles)
+            .setCenter(oCenter)
+            .setMetricParams(1, 3);
         center_obstacles.row(i) = ds.manifold().embedding(oCenter);
     }
 
@@ -98,10 +101,10 @@ int main(int argc, char** argv)
     }
 
     // Dynamics
-    double time = 0, max_time = 60, dt = 0.001;
+    double time = 0, max_time = 200, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = ds.manifold().embedding(Eigen::Vector2d(0.7, 6)),
-                    v = ds.manifold().project(x, (ds.manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.005);
+    Eigen::Vector3d x = x = radius * Eigen::Vector3d(-1, 0, 1).normalized() + center, // ds.manifold().embedding(Eigen::Vector2d(0.7, 6)),
+        v = ds.manifold().project(x, (ds.manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.005);
     // v = ds.manifold().jacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
 
     // Record
@@ -147,5 +150,6 @@ int main(int argc, char** argv)
     io_manager.setFile("outputs/surface_bundle.csv");
     io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
+    std::cout << (x - a).norm() << std::endl;
     return 0;
 }

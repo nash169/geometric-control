@@ -141,25 +141,28 @@ protected:
 
 int main(int argc, char** argv)
 {
-    // Create Euclidean 3D Space
-    dynamics::BundleDynamics<R3, TreeManifoldsImpl, ManifoldsMapping> ds;
-
-    // Create DS on a specific manifold
+    /*=====================
+    |
+    |   Sphere 2D Space
+    |
+    ======================*/
     dynamics::BundleDynamics<S2, TreeManifoldsImpl, ManifoldsMapping> s2;
-    s2.manifoldShared()->setRadius(0.3);
-    s2.manifoldShared()->setCenter(Eigen::Vector3d(0.7, 0.0, 0.5));
+    double s2_radius = 0.3;
+    Eigen::Vector3d s2_center = Eigen::Vector3d(0.7, 0.0, 0.5);
+    s2.manifoldShared()->setRadius(s2_radius);
+    s2.manifoldShared()->setCenter(s2_center);
 
-    // Dissipative task over S2
-    s2.addTasks(std::make_unique<DissipativeEnergyS2>());
-    static_cast<DissipativeEnergyS2&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
+    // Dissipative task
+    s2.addTasks(std::make_unique<tasks::DissipativeEnergy<S2>>());
+    static_cast<tasks::DissipativeEnergy<S2>&>(s2.task(0)).setDissipativeFactor(5 * Eigen::Matrix3d::Identity());
 
-    // Potential task over S2
-    s2.addTasks(std::make_unique<PotentialEnergyS2>());
-    Eigen::Vector3d a1 = s2.manifold().embedding(Eigen::Vector2d(1.5, 3)); // s2.manifold().embedding(Eigen::Vector2d(2.5, 2.7));
-    static_cast<PotentialEnergyS2&>(s2.task(1)).setStiffness(2 * Eigen::Matrix3d::Identity()).setAttractor(a1);
+    // Potential task
+    s2.addTasks(std::make_unique<tasks::PotentialEnergy<S2>>());
+    Eigen::Vector3d a = s2_radius * Eigen::Vector3d(0, -1, 1).normalized() + s2_center;
+    static_cast<tasks::PotentialEnergy<S2>&>(s2.task(1)).setStiffness(1 * Eigen::Matrix3d::Identity()).setAttractor(a);
 
-    // Obstacles tasks over S2
-    size_t num_obstacles = 2;
+    // Obstacles tasks
+    size_t num_obstacles = 1;
     double radius_obstacles = 0.05;
     Eigen::MatrixXd center_obstacles(num_obstacles, s2.manifold().eDim());
 
@@ -169,7 +172,8 @@ int main(int argc, char** argv)
 
     for (size_t i = 0; i < num_obstacles; i++) {
         s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
-        Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
+        // Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
+        Eigen::Vector2d oCenter = Eigen::Vector2d(1.9, 2.0);
         // static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(i + 2))
         //     .setRadius(radius_obstacles)
         //     .setCenter(oCenter)
@@ -177,38 +181,53 @@ int main(int argc, char** argv)
         center_obstacles.row(i) = s2.manifold().embedding(oCenter);
     }
 
-    // Dissipative task over R3
-    ds.addTasks(std::make_unique<DissipativeEnergyR3>());
-    Eigen::Matrix3d D = 2 * Eigen::MatrixXd::Identity(ds.manifoldShared()->dim(), ds.manifoldShared()->dim());
-    static_cast<DissipativeEnergyR3&>(ds.task(0)).setDissipativeFactor(D);
+    /*=====================
+    |
+    |   Euclidean 3D Space
+    |
+    ======================*/
+    dynamics::BundleDynamics<R3, TreeManifoldsImpl, ManifoldsMapping> r3;
 
-    // Potential task over R3
-    Eigen::Vector3d a2 = s2.manifold().center();
-    ds.addTasks(std::make_unique<PotentialEnergyR3>());
-    static_cast<PotentialEnergyR3&>(ds.task(1)).setStiffness(1 * Eigen::Matrix3d::Identity()).setAttractor(a2);
+    // Dissipative task
+    r3.addTasks(std::make_unique<tasks::DissipativeEnergy<R3>>());
+    Eigen::Matrix3d D = 1e-8 * Eigen::MatrixXd::Identity(r3.manifoldShared()->dim(), r3.manifoldShared()->dim());
+    static_cast<tasks::DissipativeEnergy<R3>&>(r3.task(0)).setDissipativeFactor(D);
 
-    // Tree structure
-    ds.addBundles(&s2);
+    // // Potential task
+    // Eigen::Vector3d a2 = s2.manifold().center();
+    // r3.addTasks(std::make_unique<PotentialEnergyR3>());
+    // static_cast<PotentialEnergyR3&>(r3.task(1)).setStiffness(1 * Eigen::Matrix3d::Identity()).setAttractor(a2);
 
-    // Simulation
-    double time = 0, max_time = 100, dt = 0.001;
+    /*=====================
+    |
+    |   Build Tree
+    |
+    ======================*/
+    r3.addBundles(&s2);
+
+    /*=====================
+    |
+    |   Simulation
+    |
+    ======================*/
+    double time = 0, max_time = 150, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = Eigen::Vector3d(1, 1, 1), // Eigen::Vector3d(0.408843, 0, 1.06284),
-        v = Eigen::Vector3d::Zero();
+    Eigen::Vector3d x = (s2_radius + 0.1) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
+                    v = Eigen::Vector3d::Zero();
 
     {
         Timer timer;
-        ds(x, v);
+        r3(x, v);
     }
 
-    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * ds.manifoldShared()->dim());
+    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * r3.manifoldShared()->dim());
     record.row(0)(0) = time;
-    record.row(0).segment(1, ds.manifoldShared()->dim()) = x;
-    record.row(0).tail(ds.manifoldShared()->dim()) = v;
+    record.row(0).segment(1, r3.manifoldShared()->dim()) = x;
+    record.row(0).tail(r3.manifoldShared()->dim()) = v;
 
     while (time < max_time && index < num_steps - 1) {
         // Integration
-        v = v + dt * ds(x, v);
+        v = v + dt * r3(x, v);
         x = x + dt * v;
 
         // Step forward
@@ -217,16 +236,15 @@ int main(int argc, char** argv)
 
         // Record
         record.row(index)(0) = time;
-        record.row(index).segment(1, ds.manifoldShared()->dim()) = x;
-        record.row(index).tail(ds.manifoldShared()->dim()) = v;
+        record.row(index).segment(1, r3.manifoldShared()->dim()) = x;
+        record.row(index).tail(r3.manifoldShared()->dim()) = v;
     }
 
-    PotentialEnergyS2 temp;
-    std::cout << temp.weight(x, v) << std::endl;
-    PotentialEnergyR3 temp2;
-    std::cout << temp2.weight(x, v) << std::endl;
-
-    // Get S2 embedding and potential function for visualization
+    /*=====================
+    |
+    |   Visualization Data
+    |
+    ======================*/
     double box[] = {0, M_PI, 0, 2 * M_PI};
     constexpr size_t dim = 2;
     size_t resolution = 100, num_samples = resolution * resolution;
@@ -236,6 +254,7 @@ int main(int argc, char** argv)
                     X(num_samples, dim);
     X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
 
+    // Get S2 embedding and potential function for visualization
     Eigen::VectorXd potential(num_samples);
     Eigen::MatrixXd embedding(num_samples, dim + 1);
     for (size_t i = 0; i < num_samples; i++) {
@@ -243,10 +262,14 @@ int main(int argc, char** argv)
         potential(i) = s2.task(1).map(embedding.row(i))[0];
     }
 
-    // Save data
+    /*=====================
+    |
+    |   Save Data
+    |
+    ======================*/
     FileManager io_manager;
     io_manager.setFile("outputs/euclidean_bundle.csv");
-    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a1, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
+    io_manager.write("RECORD", record, "EMBEDDING", embedding, "POTENTIAL", potential, "TARGET", a, "RADIUS", radius_obstacles, "CENTER", center_obstacles);
 
     return 0;
 }

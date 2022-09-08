@@ -26,6 +26,8 @@ ds = data["RECORD"]
 target = data["TARGET"]
 radius = data["RADIUS"]
 centers = data["CENTER"]
+if len(centers.shape) == 1:
+    centers = centers[np.newaxis, :]
 effector = data["EFFECTOR"]
 
 # COLORMAP

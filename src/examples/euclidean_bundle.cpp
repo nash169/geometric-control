@@ -171,7 +171,7 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> distr_x1(0, M_PI), distr_x2(0, 2 * M_PI);
 
     for (size_t i = 0; i < num_obstacles; i++) {
-        s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
+        // s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
         // Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
         Eigen::Vector2d oCenter = Eigen::Vector2d(1.9, 2.0);
         // static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(i + 2))
@@ -190,7 +190,13 @@ int main(int argc, char** argv)
 
     // Dissipative task
     r3.addTasks(std::make_unique<tasks::DissipativeEnergy<R3>>());
-    Eigen::Matrix3d D = 1e-8 * Eigen::MatrixXd::Identity(r3.manifoldShared()->dim(), r3.manifoldShared()->dim());
+    // Eigen::Matrix3d D = 1e-8 * Eigen::MatrixXd::Identity(r3.manifoldShared()->dim(), r3.manifoldShared()->dim()),
+    //                 U = tools::frameMatrix(s2_center);
+
+    Eigen::Matrix3d D;
+    D << 1e-8, 0, 0,
+        0, 1e-8, 0,
+        0, 0, 1e-8;
     static_cast<tasks::DissipativeEnergy<R3>&>(r3.task(0)).setDissipativeFactor(D);
 
     // // Potential task
@@ -210,9 +216,9 @@ int main(int argc, char** argv)
     |   Simulation
     |
     ======================*/
-    double time = 0, max_time = 150, dt = 0.001;
+    double time = 0, max_time = 50, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = (s2_radius + 0.1) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
+    Eigen::Vector3d x = (s2_radius + 0.05) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
                     v = Eigen::Vector3d::Zero();
 
     {

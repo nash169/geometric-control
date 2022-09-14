@@ -56,6 +56,21 @@ namespace geometric_control {
 
             return aa.axis() * aa.angle();
         }
+
+        Eigen::Matrix3d skewSymmetric(const Eigen::Vector3d& v)
+        {
+            return (Eigen::Matrix3d() << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0).finished();
+        }
+
+        Eigen::Matrix3d rotationAlign(const Eigen::Vector3d& u, const Eigen::Vector3d& v)
+        {
+            Eigen::Vector3d k = u.cross(v);
+            Eigen::Matrix3d K = skewSymmetric(k);
+            double c = u.dot(v), s = k.norm();
+
+            return Eigen::Matrix3d::Identity() + K + K * K / (1 + c);
+        }
+
     } // namespace tools
 } // namespace geometric_control
 #endif // GEOMETRIC_CONTROL_TOOLS_MATH_HPP

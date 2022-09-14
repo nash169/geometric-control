@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
     // Create DS on a specific manifold
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
-    double radius = 0.3;
+    double radius = 1;
     Eigen::Vector3d center = Eigen::Vector3d(0.0, 0.0, 0.0); // Eigen::Vector3d(0.7, 0.0, 0.5);
     ds.manifoldShared()->setRadius(radius);
     ds.manifoldShared()->setCenter(center);
@@ -101,19 +101,16 @@ int main(int argc, char** argv)
     }
 
     // Dynamics
-    double time = 0, max_time = 200, dt = 0.001;
+    double time = 0, max_time = 50, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = x = radius * Eigen::Vector3d(-1, 0, 1).normalized() + center, // ds.manifold().embedding(Eigen::Vector2d(0.7, 6)),
-        v = ds.manifold().project(x, (ds.manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.005);
-    // v = ds.manifold().jacobian(Eigen::Vector2d(1, 4)) * Eigen::Vector2d(-1, 1);
+    Eigen::Vector3d x = radius * Eigen::Vector3d(-1, 0, 1).normalized() + center, // ds.manifold().embedding(Eigen::Vector2d(0.7, 6)),
+        v = Eigen::Vector3d::Zero(); // ds.manifold().project(x, (ds.manifold().embedding(Eigen::Vector2d(1.5, 3)) - x) * 0.005);
 
     // Record
     Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * (dim + 1));
     record.row(0)(0) = time;
     record.row(0).segment(1, dim + 1) = x;
     record.row(0).segment(dim + 2, dim + 1) = v;
-
-    // std::cout << Manifold().embedding(Eigen::Vector2d(1.2, 3.5)).transpose() << std::endl;
 
     {
         Timer timer;

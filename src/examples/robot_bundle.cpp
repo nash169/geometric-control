@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 
 #include <beautiful_bullet/Simulator.hpp>
 #include <beautiful_bullet/graphics/MagnumGraphics.hpp>
@@ -24,6 +25,9 @@
 
 #include <geometric_control/tools/math.hpp>
 
+// Control
+#include <control_lib/controllers/QuadraticProgramming.hpp>
+#include <control_lib/spatial/RN.hpp>
 #include <control_lib/spatial/SE3.hpp>
 
 using namespace geometric_control;
@@ -31,17 +35,116 @@ using namespace beautiful_bullet;
 using namespace utils_lib;
 using namespace control_lib;
 
+// Controller params
+struct Params {
+    struct controller : public defaults::controller {
+    };
+
+    struct quadratic_programming : public defaults::quadratic_programming {
+        // State dimension
+        PARAM_SCALAR(size_t, nP, 7);
+
+        // Control input dimension
+        PARAM_SCALAR(size_t, nC, 7);
+
+        // Slack variable dimension
+        PARAM_SCALAR(size_t, nS, 6);
+    };
+};
+
+struct GravityCompensation {
+    GravityCompensation() = default;
+
+    size_t dimension() const { return 7; };
+
+    GravityCompensation& setModel(const bodies::MultiBodyPtr& model)
+    {
+        _model = model;
+        return *this;
+    }
+
+    void update(const spatial::RN<7>& state)
+    {
+        _eff = _model->nonLinearEffects(state._pos, state._vel);
+    }
+
+    const Eigen::Matrix<double, 7, 1>& effort() const { return _eff; }
+
+protected:
+    bodies::MultiBodyPtr _model;
+    Eigen::Matrix<double, 7, 1> _eff;
+};
+
+template <typename Target>
+struct ControllerQP : public control::MultiBodyCtr {
+    ControllerQP(const bodies::MultiBodyPtr& model, Target& target)
+        : control::MultiBodyCtr(ControlMode::CONFIGURATIONSPACE), _target(target)
+    {
+        // Robot state
+        spatial::RN<7> state;
+        state._pos = model->state();
+        state._vel = model->velocity();
+        state._acc = model->acceleration();
+        state._eff = model->effort();
+
+        // Set gravity compensation
+        _gravity
+            .setModel(model)
+            .update(state);
+
+        // Set QP
+        Eigen::MatrixXd Q = 50 * Eigen::MatrixXd::Identity(7, 7),
+                        Qt = 10 * Eigen::MatrixXd::Identity(7, 7),
+                        R = 1 * Eigen::MatrixXd::Identity(7, 7),
+                        Rt = 0.5 * Eigen::MatrixXd::Identity(7, 7),
+                        W = 0 * Eigen::MatrixXd::Identity(6, 6);
+
+        _qp.setModel(model)
+            .accelerationMinimization(Q)
+            .accelerationTracking(Qt, _target)
+            .effortMinimization(R)
+            .effortTracking(Rt, _gravity)
+            .slackVariable(W)
+            .modelDynamics(state)
+            .accelerationLimits()
+            .init();
+    }
+
+    Eigen::VectorXd action(bodies::MultiBody& body) override
+    {
+        // robot state
+        spatial::RN<7> state;
+        state._pos = body.state();
+        state._vel = body.velocity();
+        state._acc = body.acceleration();
+        state._eff = body.effort();
+
+        // update gravity tracker
+        _gravity.update(state);
+
+        // update robot tracker
+        _target.update(state._pos, state._vel).solve();
+
+        return _qp.action(state);
+    }
+
+protected:
+    Target& _target;
+    GravityCompensation _gravity;
+    controllers::QuadraticProgramming<Params, bodies::MultiBody> _qp;
+};
+
 // Robot Configuration Manifold
 class Robot : public bodies::MultiBody {
 public:
-    Robot() : bodies::MultiBody("rsc/iiwa/urdf/iiwa14.urdf"), _frame("lbr_iiwa_link_7") {}
+    Robot() : bodies::MultiBody("rsc/iiwa_bullet/model.urdf"), _frame("lbr_iiwa_link_7") {}
 
     static constexpr int dim() { return 7; }
     static constexpr int eDim() { return 7; }
 
-    Eigen::VectorXd map(const Eigen::VectorXd& q) { return this->setState(q).framePose(_frame); }
-    Eigen::MatrixXd jacobian(const Eigen::VectorXd& q) { return this->setState(q).jacobian(_frame); }
-    Eigen::MatrixXd hessian(const Eigen::VectorXd& q, const Eigen::VectorXd& v) { return this->setState(q).setVelocity(v).jacobianDerivative(_frame); }
+    Eigen::VectorXd map(const Eigen::VectorXd& q) { return this->framePose(q, _frame); }
+    Eigen::MatrixXd jacobian(const Eigen::VectorXd& q) { return static_cast<bodies::MultiBody*>(this)->jacobian(q, _frame); }
+    Eigen::MatrixXd hessian(const Eigen::VectorXd& q, const Eigen::VectorXd& v) { return this->jacobianDerivative(q, v, _frame); }
 
 protected:
     std::string _frame;
@@ -97,7 +200,7 @@ Eigen::MatrixXd ManifoldsMapping<Robot>::hessian(const Eigen::VectorXd& x, const
 template <>
 Eigen::VectorXd ManifoldsMapping<SE3>::map(const Eigen::VectorXd& x, S2& manifold)
 {
-    return x.head(3) / x.head(3).norm();
+    return x.head(3);
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<SE3>::jacobian(const Eigen::VectorXd& x, S2& manifold)
@@ -170,12 +273,11 @@ int main(int argc, char** argv)
     static_cast<tasks::DissipativeEnergy<Robot>&>(robot.task(0)).setDissipativeFactor(0.5 * Eigen::MatrixXd::Identity(7, 7));
 
     // Initial State
-    Eigen::VectorXd q_ref(7);
-    q_ref << 0, 0, 0, -M_PI / 4, 0, M_PI / 4, 0;
+    Eigen::VectorXd q_ref = (Eigen::Matrix<double, 7, 1>() << 0, 0, 0, -M_PI / 4, 0, M_PI / 4, 0).finished();
     robot.manifold().setState(q_ref);
     Eigen::VectorXd q = robot.manifold().inverseKinematics(x, R, "lbr_iiwa_link_7"),
                     dq = Eigen::VectorXd::Zero(7);
-    robot.manifold().setState(q).activateGravity();
+    robot.manifold().setState(q); // .activateGravity();
 
     /*=====================
     |
@@ -184,6 +286,11 @@ int main(int argc, char** argv)
     ======================*/
     robot.addBundles(&se3);
     se3.addBundles(&s2);
+
+    {
+        Timer timer;
+        std::cout << robot(q, dq).transpose() << std::endl;
+    }
 
     /*=====================
     |
@@ -198,124 +305,56 @@ int main(int argc, char** argv)
     simulator.addGround();
 
     bodies::SphereParams paramsSphere;
-    paramsSphere.setRadius(s2_radius - 0.1).setMass(0.0).setFriction(0.5).setColor("grey");
+    paramsSphere.setRadius(s2_radius - 0.15).setMass(0.0).setFriction(0.5).setColor("grey");
     std::shared_ptr<bodies::RigidBody> sphere = std::make_shared<bodies::RigidBody>("sphere", paramsSphere);
     sphere->setPosition(s2_center(0), s2_center(1), s2_center(2));
 
     bodies::MultiBodyPtr robotPtr = robot.manifoldShared();
+    (*robotPtr).addControllers(std::make_unique<ControllerQP<decltype(robot)>>(robotPtr, robot));
+
     simulator.add(robotPtr, sphere);
 
+    // simulator.initGraphics();
     simulator.run();
 
-    // // QP Solver
-    // optimization::IDSolver qp(7, 6, true);
+    // Record
+    size_t dim = 7;
+    Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim + 3);
+    record.row(0)(0) = time;
+    record.row(0).segment(1, dim) = q;
+    record.row(0).segment(dim + 1, dim) = dq;
+    record.row(0).tail(3) = x;
 
-    // qp.setJointPositionLimits(robotPtr->positionLower(), robotPtr->positionUpper());
-    // qp.setJointVelocityLimits(robotPtr->velocityUpper());
-    // qp.setJointAccelerationLimits(50 * Eigen::VectorXd::Ones(7));
-    // qp.setJointTorqueLimits(robotPtr->effortUpper());
-    // Eigen::VectorXd tau = robotPtr->effort();
-
-    // // Record
-    // size_t dim = 3;
-    // Eigen::MatrixXd record = Eigen::MatrixXd::Zero(num_steps, 1 + 2 * dim);
-    // record.row(0)(0) = t;
-    // record.row(0).segment(1, dim) = x; // q;
-    // record.row(0).segment(dim + 1, dim) = v; // dq;
-
-    // Eigen::MatrixXd end_effector = Eigen::MatrixXd::Zero(num_steps, 3);
-
-    // {
-    //     Timer timer;
-    //     std::cout << robot(q, dq).transpose() << std::endl;
-    // }
-
-    // // Eigen::Vector3d pos_des = x + Eigen::Vector3d(0.2, 0, 0);
-    // // Eigen::Matrix3d rot_des = Eigen::Matrix3d::Identity();
-    // // spatial::SE3 sDes(rot_des, pos_des);
-    // Eigen::Matrix<double, 6, 7> jac = robotPtr->jacobian(),
-    //                             hess = Eigen::MatrixXd::Zero(6, 7),
-    //                             J, dJ;
-
-    // Eigen::VectorXd temp = Eigen::VectorXd::Zero(6);
-    // temp.head(3) = simulator.agents()[0].framePosition() + Eigen::Vector3d(0.0, 0.2, 0);
-
-    // std::cout << "Robot Pose" << std::endl;
-    // std::cout << simulator.agents()[0].framePose().transpose() << std::endl;
-    // std::cout << temp.transpose() << std::endl;
-
-    // simulator.initGraphics();
-
-    // while (t < T && steps < num_steps - 1) {
-    //     // // Dynamics integration (robot)
-    //     // dq = dq + dt * robot(q, dq);
-    //     // q = q + dt * dq;
-
-    //     // Dynamics integration (s2)
-    //     Eigen::Vector3d robot_pos = robotPtr->framePosition();
-    //     Eigen::Matrix3d robot_rot = robotPtr->frameOrientation();
-
-    //     a = s2(x, v); // s2(robot_pos, simulator.agents()[0].frameVelocity().head(3));
-    //     v = v + dt * s2(x, v);
-    //     x = s2.manifold().retract(x, v, dt); // x + dt * v;
-
-    //     Eigen::Matrix<double, 6, 1> err;
-    //     // err = 3 * (sDes - spatial::SE3(robot_rot, robot_pos)) - 3 * simulator.agents()[0].frameVelocity();
-
-    //     Eigen::MatrixXd wRb(6, 6);
-    //     wRb.setConstant(0.0);
-    //     wRb.block(0, 0, 3, 3) = robot_rot;
-    //     wRb.block(3, 3, 3, 3) = robot_rot;
-    //     J = wRb * robotPtr->jacobian();
-    //     dJ = wRb * robotPtr->jacobianDerivative();
-
-    //     err.head(3) = 5 * a + 1 * (robot_pos - robot_pos.normalized());
-    //     err.tail(3) = Eigen::Vector3d(0, 0, 0); // 3 * geometric_control::tools::rotationError(simulator.agents()[0].frameOrientation(), geometric_control::tools::frameMatrix(-x));
-
-    //     // err = -3 * (simulator.agents()[0].framePose() - temp);
-    //     // err.tail(3).setZero();
-    //     err -= 0.3 * J * robotPtr->velocity();
-
-    //     bool result = qp.step(tau, robotPtr->state(), robotPtr->velocity(), err,
-    //         J, dJ, robotPtr->inertiaMatrix(), robotPtr->nonLinearEffects(),
-    //         dt);
-
+    // while (time < max_time && index < num_steps - 1) {
     //     // Step forward
-    //     // robotPtr->setState(q);
-    //     // robotPtr->setTorques(tau);
-    //     simulator.step(steps);
-    //     t += dt;
-    //     steps++;
-
-    //     // hess = (simulator.agents()[0].jacobian() - jac) / dt;
-    //     // jac = simulator.agents()[0].jacobian();
+    //     simulator.step(index);
+    //     time += dt;
+    //     index++;
 
     //     // Record
-    //     record.row(steps)(0) = t;
-    //     record.row(steps).segment(1, dim) = x; // q;
-    //     record.row(steps).tail(dim) = v; // dq;
-
-    //     end_effector.row(steps) = robot_pos;
+    //     record.row(index)(0) = time;
+    //     record.row(index).segment(1, dim) = robotPtr->state();
+    //     record.row(index).segment(1 + dim, dim) = robotPtr->velocity();
+    //     record.row(index).tail(3) = robotPtr->framePosition();
     // }
 
-    // double box[] = {0, M_PI, 0, 2 * M_PI};
-    // size_t resolution = 100, num_samples = resolution * resolution;
-    // Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
-    //                 gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
-    //                 X(num_samples, 2);
-    // X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
-    // Eigen::VectorXd potential(num_samples);
-    // Eigen::MatrixXd embedding(num_samples, 3);
+    double box[] = {0, M_PI, 0, 2 * M_PI};
+    size_t resolution = 100, num_samples = resolution * resolution;
+    Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
+                    gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
+                    X(num_samples, 2);
+    X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
+    Eigen::VectorXd potential(num_samples);
+    Eigen::MatrixXd embedding(num_samples, 3);
 
-    // for (size_t i = 0; i < num_samples; i++) {
-    //     embedding.row(i) = s2.manifold().embedding(X.row(i));
-    //     potential(i) = s2.task(1).map(embedding.row(i))[0];
-    // }
+    for (size_t i = 0; i < num_samples; i++) {
+        embedding.row(i) = s2.manifold().embedding(X.row(i));
+        potential(i) = s2.task(1).map(embedding.row(i))[0];
+    }
 
-    // FileManager io_manager;
-    // io_manager.setFile("outputs/robot_bundle.csv").write(record);
-    // io_manager.write("RECORD", record, "TARGET", attractor, "RADIUS", obs_radius, "CENTER", obs_centers3d, "EMBEDDING", embedding, "POTENTIAL", potential,
-    //     "EFFECTOR", end_effector);
+    FileManager io_manager;
+    io_manager.setFile("outputs/robot_bundle.csv").write(record);
+    io_manager.write("RECORD", record, "TARGET", attractor, "RADIUS", obs_radius, "CENTER", obs_center3d, "EMBEDDING", embedding, "POTENTIAL", potential);
 
     return 0;
 }

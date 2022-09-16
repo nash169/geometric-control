@@ -22,6 +22,11 @@ namespace geometric_control {
                 return N;
             }
 
+            size_t dimension() const
+            {
+                return N;
+            }
+
             // Euclidean embedding space dimension
             static constexpr int eDim()
             {

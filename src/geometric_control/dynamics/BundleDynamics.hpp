@@ -110,6 +110,11 @@ namespace geometric_control {
                 _mapping._manifold = _manifold;
             }
 
+            size_t dimension() const
+            {
+                return _manifold->dimension();
+            }
+
             // Dynamical System
             Eigen::VectorXd operator()(const Eigen::VectorXd& x, const Eigen::VectorXd& v)
             {
@@ -169,7 +174,7 @@ namespace geometric_control {
             }
 
             // Get acceleration
-            const Eigen::VectorXd& acceleration()
+            const Eigen::VectorXd& acceleration() const
             {
                 return _ddx;
             }

@@ -44,7 +44,7 @@ public:
 template <>
 Eigen::VectorXd ManifoldsMapping<R3>::map(const Eigen::VectorXd& x, S2& manifold)
 {
-    return x.normalized();
+    return 0.3 * (x - Eigen::Vector3d(0.7, 0.0, 0.5)).normalized();
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<R3>::jacobian(const Eigen::VectorXd& x, S2& manifold)
@@ -190,13 +190,13 @@ int main(int argc, char** argv)
 
     // Dissipative task
     r3.addTasks(std::make_unique<tasks::DissipativeEnergy<R3>>());
-    // Eigen::Matrix3d D = 1e-8 * Eigen::MatrixXd::Identity(r3.manifoldShared()->dim(), r3.manifoldShared()->dim()),
+    Eigen::Matrix3d D = 1e-8 * Eigen::MatrixXd::Identity(r3.manifoldShared()->dim(), r3.manifoldShared()->dim());
     //                 U = tools::frameMatrix(s2_center);
 
-    Eigen::Matrix3d D;
-    D << 1e-8, 0, 0,
-        0, 1e-8, 0,
-        0, 0, 1e-8;
+    // Eigen::Matrix3d D;
+    // D << 1e-8, 0, 0,
+    //     0, 1e-8, 0,
+    //     0, 0, 1e-8;
     static_cast<tasks::DissipativeEnergy<R3>&>(r3.task(0)).setDissipativeFactor(D);
 
     // // Potential task
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
     |   Simulation
     |
     ======================*/
-    double time = 0, max_time = 50, dt = 0.001;
+    double time = 0, max_time = 100, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
     Eigen::Vector3d x = (s2_radius + 0.05) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
                     v = Eigen::Vector3d::Zero();

@@ -12,7 +12,7 @@ namespace geometric_control {
 
             // AbstractTask(const std::shared_ptr<Manifold>& manifold) : _M(manifold) {}
 
-            // virtual ~AbstractTask() {}
+            virtual ~AbstractTask() {}
 
             std::shared_ptr<Manifold> manifold() { return _M; }
 

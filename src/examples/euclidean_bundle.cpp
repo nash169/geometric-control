@@ -44,7 +44,7 @@ public:
 template <>
 Eigen::VectorXd ManifoldsMapping<R3>::map(const Eigen::VectorXd& x, S2& manifold)
 {
-    return 0.3 * (x - Eigen::Vector3d(0.7, 0.0, 0.5)).normalized();
+    return x.normalized(); // + Eigen::Vector3d(0.7, 0.0, 0.5);
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<R3>::jacobian(const Eigen::VectorXd& x, S2& manifold)

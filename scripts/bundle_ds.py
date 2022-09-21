@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 import sys
 
 from scipy.linalg import norm
-from scipy.linalg import eig
-from scipy.sparse.linalg import eigs
-from matplotlib import cm, colors
+from matplotlib import colors
 from io_utils import get_data
 
 data = get_data(sys.argv[1], "EMBEDDING", "POTENTIAL",
@@ -74,7 +72,6 @@ ax.quiver(ds[0, 1], ds[0, 2], ds[0, 3], ds[0, 4],
           ds[0, 5], ds[0, 6], length=50, color='k')
 ax.set_title('Sampled trajectory on the manifold')
 ax.legend(loc="lower left")
-
 
 # DYNAMICS
 fig = plt.figure()

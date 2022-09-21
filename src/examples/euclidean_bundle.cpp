@@ -28,6 +28,7 @@ using TreeManifoldsImpl = TreeManifolds<R3, S2>;
 // Tree Mapping
 template <typename ParentManifold>
 class ManifoldsMapping : public TreeManifoldsImpl {
+public:
     Eigen::VectorXd map(const Eigen::VectorXd& x, S2& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
     Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, S2& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
     Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, S2& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
@@ -36,7 +37,7 @@ class ManifoldsMapping : public TreeManifoldsImpl {
     Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, R3& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
     Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, R3& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 
-public:
+    // protected:
     std::shared_ptr<ParentManifold> _manifold;
 };
 
@@ -44,19 +45,20 @@ public:
 template <>
 Eigen::VectorXd ManifoldsMapping<R3>::map(const Eigen::VectorXd& x, S2& manifold)
 {
-    return x.normalized(); // + Eigen::Vector3d(0.7, 0.0, 0.5);
+    Eigen::VectorXd xbar = x - Eigen::Vector3d(0.7, 0.0, 0.5);
+    return 0.3 * xbar.normalized() + Eigen::Vector3d(0.7, 0.0, 0.5);
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<R3>::jacobian(const Eigen::VectorXd& x, S2& manifold)
 {
-    return Eigen::MatrixXd::Identity(x.size(), x.size()) / x.norm() - x * x.transpose() / std::pow(x.norm(), 3);
+    Eigen::VectorXd xbar = x - Eigen::Vector3d(0.7, 0.0, 0.5);
+    return 0.3 * (Eigen::MatrixXd::Identity(xbar.size(), xbar.size()) / xbar.norm() - xbar * xbar.transpose() / std::pow(xbar.norm(), 3));
 }
 template <>
 Eigen::MatrixXd ManifoldsMapping<R3>::hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, S2& manifold)
 {
-    return 3 * x.dot(v) / std::pow(x.norm(), 5) * (x * x.transpose())
-        - (v * x.transpose() + x * v.transpose()) / std::pow(x.norm(), 3)
-        - x.dot(v) / std::pow(x.norm(), 3) * Eigen::MatrixXd::Identity(x.size(), x.size());
+    Eigen::VectorXd xbar = x - Eigen::Vector3d(0.7, 0.0, 0.5);
+    return 0.3 * (3 * xbar.dot(v) / std::pow(xbar.norm(), 5) * (xbar * xbar.transpose()) - (v * xbar.transpose() + xbar * v.transpose()) / std::pow(xbar.norm(), 3) - xbar.dot(v) / std::pow(xbar.norm(), 3) * Eigen::MatrixXd::Identity(xbar.size(), xbar.size()));
 }
 
 // Potential and Dissipative Energy R3 Specialization
@@ -171,13 +173,13 @@ int main(int argc, char** argv)
     std::uniform_real_distribution<double> distr_x1(0, M_PI), distr_x2(0, 2 * M_PI);
 
     for (size_t i = 0; i < num_obstacles; i++) {
-        // s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
         // Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
         Eigen::Vector2d oCenter = Eigen::Vector2d(1.9, 2.0);
-        // static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(i + 2))
-        //     .setRadius(radius_obstacles)
-        //     .setCenter(oCenter)
-        //     .setMetricParams(1, 3);
+        s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
+        static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(i + 2))
+            .setRadius(radius_obstacles)
+            .setCenter(oCenter)
+            .setMetricParams(1, 3);
         center_obstacles.row(i) = s2.manifold().embedding(oCenter);
     }
 

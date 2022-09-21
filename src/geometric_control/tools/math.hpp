@@ -71,6 +71,33 @@ namespace geometric_control {
             return Eigen::Matrix3d::Identity() + K + K * K / (1 + c);
         }
 
+        Eigen::Matrix3d expTransOperator(const Eigen::Matrix3d& R) // u->t se3->SE3 (V)
+        {
+            Eigen::AngleAxisd aa(R);
+            Eigen::Vector3d omega = aa.angle() * aa.axis();
+            Eigen::Matrix3d omega_x = (Eigen::Matrix3d() << 0, -omega(2), omega(1), omega(2), 0, -omega(0), -omega(1), omega(0), 0).finished();
+
+            double theta = omega.norm(),
+                   A = std::sin(theta) / theta,
+                   B = (1 - std::cos(theta)) / std::pow(theta, 2),
+                   C = (1 - A) / std::pow(theta, 2);
+
+            return Eigen::Matrix3d::Identity() + B * omega_x + C * omega_x * omega_x;
+        }
+
+        Eigen::Matrix3d logTrans(const Eigen::Matrix3d& R) // t->u SE3->se3 (V^-1)
+        {
+            Eigen::AngleAxisd aa(R);
+            Eigen::Vector3d omega = aa.angle() * aa.axis();
+            Eigen::Matrix3d omega_x = (Eigen::Matrix3d() << 0, -omega(2), omega(1), omega(2), 0, -omega(0), -omega(1), omega(0), 0).finished();
+
+            double theta = omega.norm(),
+                   A = std::sin(theta) / theta,
+                   B = (1 - std::cos(theta)) / std::pow(theta, 2);
+
+            return Eigen::Matrix3d::Identity() - 0.5 * omega_x + (1 - A / 2 / B) / std::pow(theta, theta) * omega_x * omega_x;
+        }
+
     } // namespace tools
 } // namespace geometric_control
 #endif // GEOMETRIC_CONTROL_TOOLS_MATH_HPP

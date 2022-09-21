@@ -151,13 +151,13 @@ protected:
 };
 
 // Special Euclidean Group
-using SE3 = manifolds::SpecialEuclidean<3>;
+using R3 = manifolds::Euclidean<3>;
 
 // 2D Sphere
 using S2 = manifolds::Sphere<2>;
 
 // Define the nodes in the tree dynamics
-using TreeManifoldsImpl = TreeManifolds<Robot, SE3, S2>;
+using TreeManifoldsImpl = TreeManifolds<Robot, R3, S2>;
 
 // Tree Mapping (non-specialize; this should be automatized)
 template <typename ParentManifold>
@@ -166,9 +166,9 @@ class ManifoldsMapping : public TreeManifoldsImpl {
     Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, Robot& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
     Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, Robot& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 
-    Eigen::VectorXd map(const Eigen::VectorXd& x, SE3& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
-    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, SE3& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
-    Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, SE3& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
+    Eigen::VectorXd map(const Eigen::VectorXd& x, R3& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
+    Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, R3& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
+    Eigen::MatrixXd hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, R3& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
 
     Eigen::VectorXd map(const Eigen::VectorXd& x, S2& manifold) override { return Eigen::VectorXd::Zero(x.size()); }
     Eigen::MatrixXd jacobian(const Eigen::VectorXd& x, S2& manifold) override { return Eigen::MatrixXd::Zero(x.size(), x.size()); }
@@ -179,53 +179,43 @@ public:
     // ParentManifold* _manifold;
 };
 
-// Robot -> SE3
+// Robot -> R3
 template <>
-Eigen::VectorXd ManifoldsMapping<Robot>::map(const Eigen::VectorXd& x, SE3& manifold)
+Eigen::VectorXd ManifoldsMapping<Robot>::map(const Eigen::VectorXd& x, R3& manifold)
 {
-    return _manifold->map(x);
+    return _manifold->map(x).head(3);
 }
 template <>
-Eigen::MatrixXd ManifoldsMapping<Robot>::jacobian(const Eigen::VectorXd& x, SE3& manifold)
+Eigen::MatrixXd ManifoldsMapping<Robot>::jacobian(const Eigen::VectorXd& x, R3& manifold)
 {
-    auto R = _manifold->frameOrientation(x);
-    Eigen::MatrixXd rot_jac(6, 6);
-    rot_jac.block(0, 0, 3, 3) = R;
-    rot_jac.block(3, 3, 3, 3) = R;
-    return rot_jac * _manifold->jacobian(x);
+    // geometric_control::tools::expTransOperator(_manifold->frameOrientation(x)) *
+    // _manifold->frameOrientation(x) *
+    return _manifold->frameOrientation(x) * _manifold->jacobian(x).block(0, 0, 3, 7);
 }
 template <>
-Eigen::MatrixXd ManifoldsMapping<Robot>::hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, SE3& manifold)
+Eigen::MatrixXd ManifoldsMapping<Robot>::hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, R3& manifold)
 {
-    auto R = _manifold->frameOrientation(x);
-    Eigen::MatrixXd rot_jac(6, 6);
-    rot_jac.block(0, 0, 3, 3) = R;
-    rot_jac.block(3, 3, 3, 3) = R;
-    return rot_jac * _manifold->hessian(x, v);
+    return _manifold->frameOrientation(x) * _manifold->hessian(x, v).block(0, 0, 3, 7);
 }
 
-// SE3 -> S2
+// R3 -> S2
 template <>
-Eigen::VectorXd ManifoldsMapping<SE3>::map(const Eigen::VectorXd& x, S2& manifold)
+Eigen::VectorXd ManifoldsMapping<R3>::map(const Eigen::VectorXd& x, S2& manifold)
 {
-    Eigen::VectorXd xbar = x.head(3) - Eigen::Vector3d(0.7, 0.0, 0.5);
-    return 0.4 * xbar.normalized() + Eigen::Vector3d(0.7, 0.0, 0.5);
+    Eigen::VectorXd xbar = x - Eigen::Vector3d(0.7, 0.0, 0.5);
+    return 0.3 * xbar.normalized() + Eigen::Vector3d(0.7, 0.0, 0.5);
 }
 template <>
-Eigen::MatrixXd ManifoldsMapping<SE3>::jacobian(const Eigen::VectorXd& x, S2& manifold)
+Eigen::MatrixXd ManifoldsMapping<R3>::jacobian(const Eigen::VectorXd& x, S2& manifold)
 {
-    Eigen::VectorXd xbar = x.head(3) - Eigen::Vector3d(0.7, 0.0, 0.5);
-    Eigen::MatrixXd j = Eigen::MatrixXd::Zero(3, x.size());
-    j.block(0, 0, 3, 3) = 0.3 * (Eigen::MatrixXd::Identity(xbar.size(), xbar.size()) / xbar.norm() - xbar * xbar.transpose() / std::pow(xbar.norm(), 3));
-    return j;
+    Eigen::VectorXd xbar = x - Eigen::Vector3d(0.7, 0.0, 0.5);
+    return 0.3 * (Eigen::MatrixXd::Identity(xbar.size(), xbar.size()) / xbar.norm() - xbar * xbar.transpose() / std::pow(xbar.norm(), 3));
 }
 template <>
-Eigen::MatrixXd ManifoldsMapping<SE3>::hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, S2& manifold)
+Eigen::MatrixXd ManifoldsMapping<R3>::hessian(const Eigen::VectorXd& x, const Eigen::VectorXd& v, S2& manifold)
 {
-    Eigen::VectorXd xbar = x.head(3) - Eigen::Vector3d(0.7, 0.0, 0.5), vbar = v.head(3);
-    Eigen::MatrixXd h = Eigen::MatrixXd::Zero(3, x.size());
-    h.block(0, 0, 3, 3) = 0.3 * (3 * xbar.dot(vbar) / std::pow(xbar.norm(), 5) * (xbar * xbar.transpose()) - (vbar * xbar.transpose() + xbar * vbar.transpose()) / std::pow(xbar.norm(), 3) - xbar.dot(vbar) / std::pow(xbar.norm(), 3) * Eigen::MatrixXd::Identity(xbar.size(), xbar.size()));
-    return h;
+    Eigen::VectorXd xbar = x - Eigen::Vector3d(0.7, 0.0, 0.5), vbar = v;
+    return 0.3 * (3 * xbar.dot(vbar) / std::pow(xbar.norm(), 5) * (xbar * xbar.transpose()) - (vbar * xbar.transpose() + xbar * vbar.transpose()) / std::pow(xbar.norm(), 3) - xbar.dot(vbar) / std::pow(xbar.norm(), 3) * Eigen::MatrixXd::Identity(xbar.size(), xbar.size()));
 }
 
 int main(int argc, char** argv)
@@ -236,7 +226,7 @@ int main(int argc, char** argv)
     |
     ======================*/
     dynamics::BundleDynamics<S2, TreeManifoldsImpl, ManifoldsMapping> s2;
-    double s2_radius = 0.4;
+    double s2_radius = 0.3;
     Eigen::Vector3d s2_center(0.7, 0.0, 0.5);
     s2.manifold().setRadius(s2_radius).setCenter(s2_center);
 
@@ -253,11 +243,11 @@ int main(int argc, char** argv)
     double obs_radius = 0.05;
     Eigen::Vector2d obs_center = Eigen::Vector2d(1.9, 2.0);
     Eigen::MatrixXd obs_center3d = s2.manifold().embedding(obs_center).transpose();
-    // s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
-    // static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(2))
-    //         .setRadius(obs_radius)
-    //         .setCenter(obs_center)
-    //         .setMetricParams(1, 3);
+    s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
+    static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(2))
+        .setRadius(obs_radius)
+        .setCenter(obs_center)
+        .setMetricParams(1, 3);
 
     // Initial state
     Eigen::Vector3d x = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
@@ -268,9 +258,9 @@ int main(int argc, char** argv)
     |   SE(3) Space
     |
     ======================*/
-    dynamics::BundleDynamics<SE3, TreeManifoldsImpl, ManifoldsMapping> se3;
-    // se3.addTasks(std::make_unique<tasks::DissipativeEnergy<SE3>>());
-    // static_cast<tasks::DissipativeEnergy<SE3>&>(se3.task(0)).setDissipativeFactor(1e-8 * Eigen::MatrixXd::Identity(se3.manifoldShared()->dim(), se3.manifoldShared()->dim()));
+    dynamics::BundleDynamics<R3, TreeManifoldsImpl, ManifoldsMapping> r3;
+    r3.addTasks(std::make_unique<tasks::DissipativeEnergy<R3>>());
+    static_cast<tasks::DissipativeEnergy<R3>&>(r3.task(0)).setDissipativeFactor(1e-8 * Eigen::MatrixXd::Identity(r3.manifoldShared()->dim(), r3.manifoldShared()->dim()));
 
     // Initial State
     Eigen::MatrixXd R = geometric_control::tools::rotationAlign(Eigen::Vector3d(0, 0, 1), -(x - s2_center).normalized());
@@ -298,8 +288,8 @@ int main(int argc, char** argv)
     |   Build Tree
     |
     ======================*/
-    robot.addBundles(&se3);
-    se3.addBundles(&s2);
+    robot.addBundles(&r3);
+    r3.addBundles(&s2);
 
     {
         Timer timer;
@@ -315,7 +305,7 @@ int main(int argc, char** argv)
     simulator.addGround();
 
     bodies::SphereParams paramsSphere;
-    paramsSphere.setRadius(s2_radius - 0.15).setMass(0.0).setFriction(0.5).setColor("grey");
+    paramsSphere.setRadius(s2_radius - 0.05).setMass(0.0).setFriction(0.5).setColor("grey");
     std::shared_ptr<bodies::RigidBody> sphere = std::make_shared<bodies::RigidBody>("sphere", paramsSphere);
     sphere->setPosition(s2_center(0), s2_center(1), s2_center(2));
 
@@ -350,8 +340,8 @@ int main(int argc, char** argv)
         q = q + dt * dq;
 
         // Sphere space integration
-        v = v + dt * s2(x, v);
-        x = s2.manifold().retract(x, v, dt);
+        v = v + dt * r3(x, v);
+        x = x + dt * v;
 
         // Increase step & time
         time += dt;

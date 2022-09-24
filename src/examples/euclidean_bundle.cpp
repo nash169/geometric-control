@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 
     // Potential task
     s2.addTasks(std::make_unique<tasks::PotentialEnergy<S2>>());
-    Eigen::Vector3d a = s2_radius * Eigen::Vector3d(0, -1, 1).normalized() + s2_center;
+    Eigen::Vector3d a = s2_radius * Eigen::Vector3d(-1, -1, 1).normalized() + s2_center;
     static_cast<tasks::PotentialEnergy<S2>&>(s2.task(1)).setStiffness(1 * Eigen::Matrix3d::Identity()).setAttractor(a);
 
     // Obstacles tasks
@@ -174,13 +174,15 @@ int main(int argc, char** argv)
 
     for (size_t i = 0; i < num_obstacles; i++) {
         // Eigen::Vector2d oCenter(distr_x1(eng), distr_x2(eng));
-        Eigen::Vector2d oCenter = Eigen::Vector2d(1.9, 2.0);
+        // Eigen::Vector2d oCenter = Eigen::Vector2d(1.9, 2.0);
         s2.addTasks(std::make_unique<tasks::ObstacleAvoidance<S2>>());
         static_cast<tasks::ObstacleAvoidance<S2>&>(s2.task(i + 2))
             .setRadius(radius_obstacles)
-            .setCenter(oCenter)
+            // .setCenter(oCenter)
+            .setCenter2(s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center)
             .setMetricParams(1, 3);
-        center_obstacles.row(i) = s2.manifold().embedding(oCenter);
+        // center_obstacles.row(i) = s2.manifold().embedding(oCenter);
+        center_obstacles.row(i) = s2_radius * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center;
     }
 
     /*=====================
@@ -220,7 +222,7 @@ int main(int argc, char** argv)
     ======================*/
     double time = 0, max_time = 100, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0;
-    Eigen::Vector3d x = (s2_radius + 0.05) * Eigen::Vector3d(-1, 0, 1).normalized() + s2_center,
+    Eigen::Vector3d x = (s2_radius + 0.05) * Eigen::Vector3d(-1, 1, 1).normalized() + s2_center,
                     v = Eigen::Vector3d::Zero();
 
     {

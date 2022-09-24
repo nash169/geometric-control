@@ -55,23 +55,23 @@ obstacles = np.append(obstacles, ds[:, 1:4], axis=0)
 ax.set_box_aspect((np.ptp(obstacles[:, 0]), np.ptp(
     obstacles[:, 1]), np.ptp(obstacles[:, 2])))
 
-# PLOT TRAJECTORY
-check = norm((ds[:, 1:4] - np.array([[0.7, 0.0, 0.5]]))/0.3, axis=1) < 1
-ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black", label="Trajectory")
-ax.plot(ds[check, 1], ds[check, 2], ds[check, 3], color="red")
-# target
-ax.scatter(target[0], target[1],  target[2], color="red", label="Target")
-# init pos
-ax.scatter(ds[0, 1], ds[0, 2], ds[0, 3],
-           color="green", label="Initial Position")
-# end pos
-ax.scatter(ds[-1, 1], ds[-1, 2], ds[-1, 3],
-           color="blue", label="Final Position")
-# init vel
-ax.quiver(ds[0, 1], ds[0, 2], ds[0, 3], ds[0, 4],
-          ds[0, 5], ds[0, 6], length=50, color='k')
-ax.set_title('Sampled trajectory on the manifold')
-ax.legend(loc="lower left")
+# # PLOT TRAJECTORY
+# check = norm((ds[:, 1:4] - np.array([[0.7, 0.0, 0.5]]))/0.3, axis=1) < 1
+# ax.plot(ds[:, 1], ds[:, 2], ds[:, 3], color="black", label="Trajectory")
+# ax.plot(ds[check, 1], ds[check, 2], ds[check, 3], color="red")
+# # target
+# ax.scatter(target[0], target[1],  target[2], color="red", label="Target")
+# # init pos
+# ax.scatter(ds[0, 1], ds[0, 2], ds[0, 3],
+#            color="green", label="Initial Position")
+# # end pos
+# ax.scatter(ds[-1, 1], ds[-1, 2], ds[-1, 3],
+#            color="blue", label="Final Position")
+# # init vel
+# ax.quiver(ds[0, 1], ds[0, 2], ds[0, 3], ds[0, 4],
+#           ds[0, 5], ds[0, 6], length=50, color='k')
+# ax.set_title('Sampled trajectory on the manifold')
+# ax.legend(loc="lower left")
 
 # DYNAMICS
 fig = plt.figure()

@@ -85,7 +85,7 @@ namespace geometric_control {
             return Eigen::Matrix3d::Identity() + B * omega_x + C * omega_x * omega_x;
         }
 
-        Eigen::Matrix3d logTrans(const Eigen::Matrix3d& R) // t->u SE3->se3 (V^-1)
+        Eigen::Matrix3d logTransOperator(const Eigen::Matrix3d& R) // t->u SE3->se3 (V^-1)
         {
             Eigen::AngleAxisd aa(R);
             Eigen::Vector3d omega = aa.angle() * aa.axis();

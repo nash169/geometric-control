@@ -36,6 +36,12 @@ namespace geometric_control {
                 return *this;
             }
 
+            ObstacleAvoidance& setCenter2(const Eigen::VectorXd& c)
+            {
+                _c = c;
+                return *this;
+            }
+
             // Set metric parameters
             ObstacleAvoidance& setMetricParams(const double& a, const double& b)
             {

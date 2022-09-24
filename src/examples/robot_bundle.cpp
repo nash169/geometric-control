@@ -26,9 +26,11 @@
 #include <geometric_control/tools/math.hpp>
 
 // Control
+#include <control_lib/controllers/Feedback.hpp>
 #include <control_lib/controllers/QuadraticProgramming.hpp>
 #include <control_lib/spatial/RN.hpp>
 #include <control_lib/spatial/SE3.hpp>
+#include <control_lib/spatial/SO3.hpp>
 
 using namespace geometric_control;
 using namespace beautiful_bullet;
@@ -38,6 +40,11 @@ using namespace control_lib;
 // Controller params
 struct Params {
     struct controller : public defaults::controller {
+    };
+
+    struct feedback : defaults::feedback {
+        // Output dimension
+        PARAM_SCALAR(size_t, d, 3);
     };
 
     struct quadratic_programming : public defaults::quadratic_programming {
@@ -131,6 +138,7 @@ struct ControllerQP : public control::MultiBodyCtr {
 protected:
     Target& _target;
     GravityCompensation _gravity;
+    controllers::Feedback<Params, spatial::SO3> _feedback;
     controllers::QuadraticProgramming<Params, bodies::MultiBody> _qp;
 };
 
@@ -337,7 +345,7 @@ int main(int argc, char** argv)
     config_log.row(0).head(config_dim) = q;
     config_log.row(0).tail(config_dim) = dq;
     task_log.row(0).head(task_dim) = robotPtr->framePosition(q);
-    task_log.row(0).segment(task_dim, task_dim) = robotPtr->frameVelocity(dq).head(task_dim);
+    task_log.row(0).segment(task_dim, task_dim) = robotPtr->frameVelocity(q, dq).head(task_dim);
     task_log.row(0).segment(2 * task_dim, task_dim) = x;
     task_log.row(0).tail(task_dim) = v;
 
@@ -350,6 +358,8 @@ int main(int argc, char** argv)
         q = q + dt * dq;
 
         // Sphere space integration
+        // v = v + dt * s2(robotPtr->framePosition(q), robotPtr->frameVelocity(q, dq).head(task_dim));
+        // x = s2.manifold().retract(robotPtr->framePosition(q), v, dt);
         v = v + dt * s2(x, v);
         x = s2.manifold().retract(x, v, dt);
 
@@ -362,7 +372,7 @@ int main(int argc, char** argv)
         config_log.row(index).head(config_dim) = q; // robotPtr->state();
         config_log.row(index).tail(config_dim) = dq; // robotPtr->velocity();
         task_log.row(index).head(task_dim) = robotPtr->framePosition(q);
-        task_log.row(index).segment(task_dim, task_dim) = robotPtr->frameVelocity(dq).head(task_dim);
+        task_log.row(index).segment(task_dim, task_dim) = robotPtr->frameVelocity(q, dq).head(task_dim);
         task_log.row(index).segment(2 * task_dim, task_dim) = x;
         task_log.row(index).tail(task_dim) = v;
     }

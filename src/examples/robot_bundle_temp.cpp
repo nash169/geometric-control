@@ -137,7 +137,7 @@ struct ControllerQP : public control::MultiBodyCtr {
         // Set feedback ds
         _center = Eigen::Vector3d(0.7, 0.0, 0.5);
         Eigen::Matrix3d K = 1 * Eigen::Matrix3d::Identity(),
-                        D = 0.1 * Eigen::Matrix3d::Identity();
+                        D = 2 * Eigen::Matrix3d::Identity();
         spatial::SO3 oDes(geometric_control::tools::rotationAlign(Eigen::Vector3d(0, 0, 1), -(x - _center).normalized()));
         oDes._vel = Eigen::Vector3d::Zero();
         _feedback.setStiffness(K).setDamping(D).setReference(oDes);
@@ -154,11 +154,11 @@ struct ControllerQP : public control::MultiBodyCtr {
         // std::cout << _acc.transpose() << std::endl;
 
         // Set QP
-        Eigen::MatrixXd Q = 50 * Eigen::MatrixXd::Identity(7, 7),
-                        Qt = 10 * Eigen::MatrixXd::Identity(7, 7),
+        Eigen::MatrixXd Q = 10 * Eigen::MatrixXd::Identity(7, 7),
+                        Qt = 5 * Eigen::MatrixXd::Identity(7, 7),
                         R = 1 * Eigen::MatrixXd::Identity(7, 7),
                         Rt = 0.5 * Eigen::MatrixXd::Identity(7, 7),
-                        W = 0.1 * Eigen::MatrixXd::Identity(6, 6);
+                        W = 0 * Eigen::MatrixXd::Identity(6, 6);
 
         std::cout << "qp" << std::endl;
 
@@ -170,8 +170,18 @@ struct ControllerQP : public control::MultiBodyCtr {
             .slackVariable(W)
             .modelDynamics(state)
             // .inverseDynamics(state, *this)
+            .positionLimits(state)
+            .velocityLimits(state)
             .accelerationLimits()
+            .effortLimits()
             .init();
+
+        // // QP Walid
+        // _qpWalid = std::make_unique<optimization::IDSolver>(7, 6, true);
+        // _qpWalid->setJointPositionLimits(target.manifoldShared()->positionLower(), target.manifoldShared()->positionUpper());
+        // _qpWalid->setJointVelocityLimits(target.manifoldShared()->velocityUpper());
+        // _qpWalid->setJointAccelerationLimits(50 * Eigen::VectorXd::Ones(7));
+        // _qpWalid->setJointTorqueLimits(target.manifoldShared()->effortUpper());
     }
 
     size_t dimension() const { return 7; };
@@ -210,10 +220,12 @@ struct ControllerQP : public control::MultiBodyCtr {
         _target.bundle(0).solve();
         _acc << _target.bundle(0)._ddx, _feedback.setReference(oDes).action(oCurr);
         // _acc.tail(3) = Eigen::Vector3d(0, 0, 0);
-
-        // std::cout << _acc.transpose() << std::endl;
         auto tau = _qp.action(state);
-        // std::cout << "-----" << std::endl;
+
+        // Eigen::VectorXd tau = Eigen::VectorXd::Zero(7);
+        // bool result = _qpWalid->step(tau, state._pos, state._vel, _acc,
+        //     _target.manifoldShared()->jacobian(state._pos), _target.manifoldShared()->jacobianDerivative(state._pos, state._vel),
+        //     _target.manifoldShared()->inertiaMatrix(state._pos), _target.manifoldShared()->nonLinearEffects(state._pos, state._vel), 0.001);
 
         return tau;
     }
@@ -226,6 +238,8 @@ protected:
     Eigen::Vector3d _center;
     Eigen::Matrix<double, 6, 1> _acc;
     Eigen::Matrix<double, 7, 1> _eff;
+
+    std::unique_ptr<optimization::IDSolver> _qpWalid;
 };
 
 // Special Euclidean Group
@@ -397,9 +411,14 @@ int main(int argc, char** argv)
 
     simulator.add(robotPtr, sphere, obs);
 
-    simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
-    simulator.initGraphics();
-    simulator.run();
+    // simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
+
+    // simulator.initGraphics();
+    // static_cast<graphics::MagnumGraphics&>(simulator.graphics())
+    //     .app()
+    //     .camera3D()
+    //     .setPose(Vector3{-5., 3., 5.});
+    // simulator.run();
 
     double time = 0, max_time = 100, dt = 0.001;
     size_t num_steps = std::ceil(max_time / dt) + 1, index = 0, config_dim = 7, task_dim = 3;

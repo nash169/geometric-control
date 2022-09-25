@@ -88,7 +88,7 @@ public:
         Eigen::Matrix<double, 6, 6> R6 = Eigen::Matrix<double, 6, 6>::Zero();
         R6.block(0, 0, 3, 3) = R;
         R6.block(3, 3, 3, 3) = R;
-        return R6 * static_cast<bodies::MultiBody*>(this)->jacobian(q, _frame);
+        return static_cast<bodies::MultiBody*>(this)->jacobian(q, _frame); // R6 *
     }
 
     Eigen::MatrixXd jacobianDerivative(const Eigen::VectorXd& q, const Eigen::VectorXd& dq)
@@ -105,7 +105,7 @@ public:
         R_dot6.block(0, 0, 3, 3) = R_dot;
         R_dot6.block(3, 3, 3, 3) = R_dot;
 
-        return R_dot6 * J + R6 * static_cast<bodies::MultiBody*>(this)->jacobianDerivative(q, dq, _frame);
+        return static_cast<bodies::MultiBody*>(this)->jacobianDerivative(q, dq, _frame); // R_dot6 * J +R6 *
     }
 
     // protected:
@@ -155,33 +155,33 @@ struct ControllerQP : public control::MultiBodyCtr {
 
         // Set QP
         Eigen::MatrixXd Q = 10 * Eigen::MatrixXd::Identity(7, 7),
-                        Qt = 5 * Eigen::MatrixXd::Identity(7, 7),
-                        R = 1 * Eigen::MatrixXd::Identity(7, 7),
-                        Rt = 0.5 * Eigen::MatrixXd::Identity(7, 7),
-                        W = 0 * Eigen::MatrixXd::Identity(6, 6);
+                        Qt = 0 * Eigen::MatrixXd::Identity(7, 7),
+                        R = 0.1 * Eigen::MatrixXd::Identity(7, 7),
+                        Rt = 0.05 * Eigen::MatrixXd::Identity(7, 7),
+                        W = 1 * Eigen::MatrixXd::Identity(6, 6);
 
         std::cout << "qp" << std::endl;
 
         _qp.setModel(target.manifoldShared())
             .accelerationMinimization(Q)
-            .accelerationTracking(Qt, _target)
+            // .accelerationTracking(Qt, _target)
             .effortMinimization(R)
             .effortTracking(Rt, *this)
             .slackVariable(W)
             .modelDynamics(state)
-            // .inverseDynamics(state, *this)
+            .inverseDynamics(state, *this)
             .positionLimits(state)
             .velocityLimits(state)
             .accelerationLimits()
             .effortLimits()
             .init();
 
-        // // QP Walid
-        // _qpWalid = std::make_unique<optimization::IDSolver>(7, 6, true);
-        // _qpWalid->setJointPositionLimits(target.manifoldShared()->positionLower(), target.manifoldShared()->positionUpper());
-        // _qpWalid->setJointVelocityLimits(target.manifoldShared()->velocityUpper());
-        // _qpWalid->setJointAccelerationLimits(50 * Eigen::VectorXd::Ones(7));
-        // _qpWalid->setJointTorqueLimits(target.manifoldShared()->effortUpper());
+        // QP Walid
+        _qpWalid = std::make_unique<optimization::IDSolver>(7, 6, true);
+        _qpWalid->setJointPositionLimits(target.manifoldShared()->positionLower(), target.manifoldShared()->positionUpper());
+        _qpWalid->setJointVelocityLimits(target.manifoldShared()->velocityUpper());
+        _qpWalid->setJointAccelerationLimits(50 * Eigen::VectorXd::Ones(7));
+        _qpWalid->setJointTorqueLimits(target.manifoldShared()->effortUpper());
     }
 
     size_t dimension() const { return 7; };
@@ -220,12 +220,12 @@ struct ControllerQP : public control::MultiBodyCtr {
         _target.bundle(0).solve();
         _acc << _target.bundle(0)._ddx, _feedback.setReference(oDes).action(oCurr);
         // _acc.tail(3) = Eigen::Vector3d(0, 0, 0);
-        auto tau = _qp.action(state);
+        // auto tau = _qp.action(state);
 
-        // Eigen::VectorXd tau = Eigen::VectorXd::Zero(7);
-        // bool result = _qpWalid->step(tau, state._pos, state._vel, _acc,
-        //     _target.manifoldShared()->jacobian(state._pos), _target.manifoldShared()->jacobianDerivative(state._pos, state._vel),
-        //     _target.manifoldShared()->inertiaMatrix(state._pos), _target.manifoldShared()->nonLinearEffects(state._pos, state._vel), 0.001);
+        Eigen::VectorXd tau = Eigen::VectorXd::Zero(7);
+        bool result = _qpWalid->step(tau, state._pos, state._vel, _acc,
+            _target.manifoldShared()->jacobian(state._pos), _target.manifoldShared()->jacobianDerivative(state._pos, state._vel),
+            _target.manifoldShared()->inertiaMatrix(state._pos), _target.manifoldShared()->nonLinearEffects(state._pos, state._vel), 0.001);
 
         return tau;
     }
@@ -409,82 +409,82 @@ int main(int argc, char** argv)
     bodies::MultiBodyPtr robotPtr = robot.manifoldShared();
     (*robotPtr).addControllers(std::make_unique<ControllerQP<decltype(robot)>>(robot));
 
-    simulator.add(robotPtr, sphere, obs);
+    simulator.add(robotPtr, sphere, obs); // sphere, obs
 
-    // simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
+    simulator.setGraphics(std::make_unique<graphics::MagnumGraphics>());
 
-    // simulator.initGraphics();
+    simulator.initGraphics();
     // static_cast<graphics::MagnumGraphics&>(simulator.graphics())
     //     .app()
     //     .camera3D()
     //     .setPose(Vector3{-5., 3., 5.});
-    // simulator.run();
+    simulator.run();
 
-    double time = 0, max_time = 100, dt = 0.001;
-    size_t num_steps = std::ceil(max_time / dt) + 1, index = 0, config_dim = 7, task_dim = 3;
-    Eigen::VectorXd time_log = Eigen::VectorXd::Zero(num_steps);
-    Eigen::MatrixXd config_log = Eigen::MatrixXd::Zero(num_steps, 2 * config_dim),
-                    task_log = Eigen::MatrixXd::Zero(num_steps, 4 * task_dim);
-    time_log(0) = time;
-    config_log.row(0).head(config_dim) = q;
-    config_log.row(0).tail(config_dim) = dq;
-    task_log.row(0).head(task_dim) = robot.manifoldShared()->framePosition(q);
-    task_log.row(0).segment(task_dim, task_dim) = robot.manifoldShared()->frameVelocity(q, dq).head(task_dim);
-    task_log.row(0).segment(2 * task_dim, task_dim) = x;
-    task_log.row(0).tail(task_dim) = v;
+    // double time = 0, max_time = 100, dt = 0.001;
+    // size_t num_steps = std::ceil(max_time / dt) + 1, index = 0, config_dim = 7, task_dim = 3;
+    // Eigen::VectorXd time_log = Eigen::VectorXd::Zero(num_steps);
+    // Eigen::MatrixXd config_log = Eigen::MatrixXd::Zero(num_steps, 2 * config_dim),
+    //                 task_log = Eigen::MatrixXd::Zero(num_steps, 4 * task_dim);
+    // time_log(0) = time;
+    // config_log.row(0).head(config_dim) = q;
+    // config_log.row(0).tail(config_dim) = dq;
+    // task_log.row(0).head(task_dim) = robot.manifoldShared()->framePosition(q);
+    // task_log.row(0).segment(task_dim, task_dim) = robot.manifoldShared()->frameVelocity(q, dq).head(task_dim);
+    // task_log.row(0).segment(2 * task_dim, task_dim) = x;
+    // task_log.row(0).tail(task_dim) = v;
 
-    while (time < max_time && index < num_steps - 1) {
-        // Robot integration
-        // simulator.step(index);
+    // while (time < max_time && index < num_steps - 1) {
+    //     // Robot integration
+    //     // simulator.step(index);
 
-        // Configuration space integration
-        dq = dq + dt * robot(q, dq);
-        q = q + dt * dq;
+    //     // Configuration space integration
+    //     dq = dq + dt * robot(q, dq);
+    //     q = q + dt * dq;
 
-        // Sphere space integration
-        // v = v + dt * r3(robotPtr->framePosition(q), robotPtr->frameVelocity(q, dq).head(task_dim));
-        // x = robotPtr->framePosition(q) + dt * v;
-        v = v + dt * r3(x, v);
-        x = x + dt * v;
+    //     // Sphere space integration
+    //     // v = v + dt * r3(robotPtr->framePosition(q), robotPtr->frameVelocity(q, dq).head(task_dim));
+    //     // x = robotPtr->framePosition(q) + dt * v;
+    //     v = v + dt * r3(x, v);
+    //     x = x + dt * v;
 
-        // Increase step & time
-        time += dt;
-        index++;
+    //     // Increase step & time
+    //     time += dt;
+    //     index++;
 
-        // Record
-        time_log(index) = time;
-        config_log.row(index).head(config_dim) = q; // robotPtr->state();
-        config_log.row(index).tail(config_dim) = dq; // robotPtr->velocity();
-        task_log.row(index).head(task_dim) = robot.manifoldShared()->framePosition(q);
-        task_log.row(index).segment(task_dim, task_dim) = robot.manifoldShared()->frameVelocity(q, dq).head(task_dim);
-        task_log.row(index).segment(2 * task_dim, task_dim) = x;
-        task_log.row(index).tail(task_dim) = v;
-    }
+    //     // Record
+    //     time_log(index) = time;
+    //     config_log.row(index).head(config_dim) = q; // robotPtr->state();
+    //     config_log.row(index).tail(config_dim) = dq; // robotPtr->velocity();
+    //     task_log.row(index).head(task_dim) = robot.manifoldShared()->framePosition(q);
+    //     task_log.row(index).segment(task_dim, task_dim) = robot.manifoldShared()->frameVelocity(q, dq).head(task_dim);
+    //     task_log.row(index).segment(2 * task_dim, task_dim) = x;
+    //     task_log.row(index).tail(task_dim) = v;
+    // }
 
-    double box[] = {0, M_PI, 0, 2 * M_PI};
-    size_t resolution = 100, num_samples = resolution * resolution;
-    Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
-                    gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
-                    X(num_samples, 2);
-    X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
-    Eigen::VectorXd potential(num_samples);
-    Eigen::MatrixXd embedding(num_samples, 3);
+    // double box[] = {0, M_PI, 0, 2 * M_PI};
+    // size_t resolution = 100, num_samples = resolution * resolution;
+    // Eigen::MatrixXd gridX = Eigen::RowVectorXd::LinSpaced(resolution, box[0], box[1]).replicate(resolution, 1),
+    //                 gridY = Eigen::VectorXd::LinSpaced(resolution, box[2], box[3]).replicate(1, resolution),
+    //                 X(num_samples, 2);
+    // X << Eigen::Map<Eigen::VectorXd>(gridX.data(), gridX.size()), Eigen::Map<Eigen::VectorXd>(gridY.data(), gridY.size());
+    // Eigen::VectorXd potential(num_samples);
+    // Eigen::MatrixXd embedding(num_samples, 3);
 
-    for (size_t i = 0; i < num_samples; i++) {
-        embedding.row(i) = s2.manifold().embedding(X.row(i));
-        potential(i) = s2.task(1).map(embedding.row(i))[0];
-    }
+    // for (size_t i = 0; i < num_samples; i++) {
+    //     embedding.row(i) = s2.manifold().embedding(X.row(i));
+    //     potential(i) = s2.task(1).map(embedding.row(i))[0];
+    // }
 
-    Eigen::MatrixXd pos_limits(7, 2), vel_limits(7, 2);
-    pos_limits << robotPtr->positionLower(), robotPtr->positionUpper();
-    vel_limits << robotPtr->velocityLower(), robotPtr->velocityUpper();
+    // Eigen::MatrixXd pos_limits(7, 2), vel_limits(7, 2);
+    // pos_limits << robotPtr->positionLower(), robotPtr->positionUpper();
+    // vel_limits << robotPtr->velocityLower(), robotPtr->velocityUpper();
 
-    FileManager io_manager;
-    io_manager.setFile("outputs/robot_bundle.csv")
-        .write("TIME", time_log, "CONFIG", config_log, "TASK", task_log,
-            "TARGET", attractor, "RADIUS", obs_radius, "CENTER", obs_center3d,
-            "EMBEDDING", embedding, "POTENTIAL", potential,
-            "POSLIMITS", pos_limits, "VELLIMITS", vel_limits);
+    // FileManager io_manager;
+    // io_manager.setFile("outputs/robot_bundle.csv")
+    //     .write("TIME", time_log, "CONFIG", config_log, "TASK", task_log,
+    //         "TARGET", attractor, "RADIUS", obs_radius, "CENTER", obs_center3d,
+    //         "EMBEDDING", embedding, "POTENTIAL", potential,
+    //         "POSLIMITS", pos_limits, "VELLIMITS", vel_limits);
 
     return 0;
 }

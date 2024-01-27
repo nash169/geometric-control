@@ -13,7 +13,7 @@ blddir = "build"
 libdir = "geometric_control"
 
 compiler = "cxx"
-required = ["eigen", "qpoases", "kernellib"]
+required = ["eigen", "qpoases"]  # "kernellib"
 optional = ["utilslib", "beautifulbullet", "controllib", "integratorlib"]
 
 

@@ -19,8 +19,8 @@ using namespace geometric_control;
 using namespace utils_lib;
 
 // Define base manifold
-using Manifold = manifolds::Sphere<2>;
-// using Manifold = manifolds::Euclidean<2>;
+// using Manifold = manifolds::Sphere<2>;
+using Manifold = manifolds::Euclidean<2>;
 
 // Define the nodes in the tree dynamics
 using TreeManifoldsImpl = TreeManifolds<Manifold>;
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     dynamics::BundleDynamics<Manifold, TreeManifoldsImpl, ManifoldsMapping> ds;
     double radius = 1;
     Eigen::Vector3d center = Eigen::Vector3d(0.0, 0.0, 0.0); // Eigen::Vector3d(0.7, 0.0, 0.5);
-    ds.manifoldShared()->setRadius(radius);
+    // ds.manifoldShared()->setRadius(radius);
     ds.manifoldShared()->setCenter(center);
 
     // Assign potential and dissipative task to the DS

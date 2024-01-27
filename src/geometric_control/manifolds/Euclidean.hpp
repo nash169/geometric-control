@@ -92,26 +92,26 @@ namespace geometric_control {
             }
 
             // Distance in the Euclidean embedding
-            double dist(const Eigen::Matrix<double, dim(), 1>& x, const Eigen::Matrix<double, dim(), 1>& y) const
+            double dist(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
             {
                 return (x - y).norm();
             }
 
             // Distance gradient in the Euclidean embedding (here differential components and the gradient coincides due to the linearity of the space)
-            Eigen::Matrix<double, dim(), 1> distGrad(const Eigen::Matrix<double, dim(), 1>& x, const Eigen::Matrix<double, dim(), 1>& y) const
+            Eigen::Matrix<double, eDim(), 1> distGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
             {
                 return (y - x) / (x - y).norm();
             }
 
             // Distance hessian in the Euclidean space (same as for the gradient)
-            Eigen::Matrix<double, dim(), dim()> distHess(const Eigen::Matrix<double, dim(), 1>& x, const Eigen::Matrix<double, dim(), 1>& y) const
+            Eigen::Matrix<double, eDim(), eDim()> distHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& y) const
             {
-                Eigen::Matrix<double, dim(), 1> d = x - y;
+                Eigen::Matrix<double, eDim(), 1> d = x - y;
 
-                return (Eigen::MatrixXd::Identity(dim(), dim()) - d * d.transpose() / d.squaredNorm()) / d.norm();
+                return (Eigen::MatrixXd::Identity(eDim(), eDim()) - d * d.transpose() / d.squaredNorm()) / d.norm();
             }
 
-            Eigen::MatrixXd riemannGrad(const Eigen::Matrix<double, dim(), 1>& x, const Eigen::MatrixXd& grad) const
+            Eigen::MatrixXd riemannGrad(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::MatrixXd& grad) const
             {
                 // Eigen::MatrixXd rGrad(grad.rows(), grad.cols());
 
@@ -122,7 +122,7 @@ namespace geometric_control {
                 return grad;
             }
 
-            Eigen::MatrixXd riemannHess(const Eigen::Matrix<double, dim(), 1>& x, const Eigen::Matrix<double, dim(), 1>& v, const Eigen::MatrixXd& grad, const Eigen::MatrixXd& hess) const
+            Eigen::MatrixXd riemannHess(const Eigen::Matrix<double, eDim(), 1>& x, const Eigen::Matrix<double, eDim(), 1>& v, const Eigen::MatrixXd& grad, const Eigen::MatrixXd& hess) const
             {
                 // Eigen::MatrixXd rHess(hess.rows(), hess.cols());
 

@@ -5,7 +5,7 @@
 *.slo
 *.lo
 *.o
-*.obj
+# *.obj
 
 # Precompiled Headers
 *.gch
@@ -406,3 +406,4 @@ TSWLatexianTemp*
 .lock-waf_darwin_build
 waf_configure
 install/
+outputs/

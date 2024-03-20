@@ -30,28 +30,44 @@ namespace geometric_control {
                 return *this;
             }
 
+            // Space dimension
+            constexpr int dim() const override
+            {
+                return 1;
+            }
+
             // Optimization weight
-            Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+            virtual Eigen::MatrixXd weight(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
             {
                 return tools::makeMatrix(1);
             }
 
             // Map between configuration and task manifolds
+            // x is a point on the manifold but expressed in embedding Euclidean space coordinates
+            // this map is actually a multi scalar valued function on the manifold
             Eigen::VectorXd map(const Eigen::VectorXd& x) const override
             {
-                return tools::makeVector(_M.distEE(_a, x));
+                return tools::makeVector(_M->dist(_a, x));
             }
 
             // Jacobian
+            // Gradient of the scalar function. It needs to be projected onto the tangent space
             Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
             {
-                return _M.distEEGrad(_a, x).transpose();
+                return _M->riemannGrad(x, _M->distGrad(_a, x).transpose());
             }
 
             // Hessian
             Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
             {
-                return tools::TensorCast(_M.distEEHess(_a, x), 1, x.rows(), x.rows());
+                return tools::TensorCast(_M->distHess(_a, x), 1, x.rows(), x.rows());
+            }
+
+            Eigen::MatrixXd hessianDir(const Eigen::VectorXd& x, const Eigen::VectorXd& v) const override
+            {
+                // find a way not to calculate multiple times gradient
+                // maybe the projection might take place in the bundle DS
+                return _M->riemannHess(x, v, _M->distGrad(_a, x).transpose(), (_M->distHess(_a, x) * v).transpose());
             }
 
             // Task manifold metric

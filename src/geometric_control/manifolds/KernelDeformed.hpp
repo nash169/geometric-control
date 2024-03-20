@@ -11,9 +11,9 @@ using namespace kernel_lib;
 namespace geometric_control {
     namespace manifolds {
         template <typename Params, typename Kernel = kernels::SquaredExp<Params>>
-        class KernelDeformed : public AbstractManifold {
+        class KernelDeformed : public AbstractManifold<Eigen::Dynamic, 1> {
         public:
-            KernelDeformed(const size_t& dim) : AbstractManifold(dim) {}
+            KernelDeformed() = default;
 
             // Set the space deformation points and weights
             KernelDeformed& setDeformations(const Eigen::MatrixXd& x, const Eigen::VectorXd w)
@@ -23,7 +23,7 @@ namespace geometric_control {
             }
 
             // Embedding
-            Eigen::VectorXd embedding(const Eigen::VectorXd& x) const override
+            Eigen::VectorXd embedding(const Eigen::VectorXd& x) const
             {
                 Eigen::VectorXd y(x.rows() + 1);
                 y.segment(0, x.rows()) = x;
@@ -33,7 +33,7 @@ namespace geometric_control {
             }
 
             // Jacobian
-            Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const override
+            Eigen::MatrixXd jacobian(const Eigen::VectorXd& x) const
             {
                 // Dimension
                 size_t d = x.rows();
@@ -48,14 +48,14 @@ namespace geometric_control {
             }
 
             // Hessian
-            Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const override
+            Eigen::Tensor<double, 3> hessian(const Eigen::VectorXd& x) const
             {
-                Eigen::Tensor<double, 3> hess(_d, _d, _d);
+                Eigen::Tensor<double, 3> hess(x.size() + 1, x.size(), x.size());
                 return hess;
             }
 
             // Metric
-            Eigen::MatrixXd metric(const Eigen::VectorXd& x) const override
+            Eigen::MatrixXd metric(const Eigen::VectorXd& x) const
             {
                 Eigen::MatrixXd g = _f.grad(x) * _f.grad(x).transpose();
                 g.diagonal().array() += 1;
@@ -64,7 +64,7 @@ namespace geometric_control {
             }
 
             // Christoffel symbols
-            Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) const override
+            Eigen::Tensor<double, 3> christoffel(const Eigen::VectorXd& x) const
             {
                 return tools::leviCivitaConnection(tools::TensorCast(metric(x).inverse()), metricGrad(x));
             }
